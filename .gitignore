@@ -1,1 +1,3 @@
-/data/CalliRewrite/seq_extract/outputs/
+/seq_extract/outputs/
+__pycache__/
+*.py[cod]

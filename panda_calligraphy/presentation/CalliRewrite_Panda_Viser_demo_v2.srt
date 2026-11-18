@@ -1,0 +1,31 @@
+1
+00:00:00,000 --> 00:00:06,000
+Yesterday: actual input, refined CalliRewrite brush output, and Panda replay.
+
+2
+00:00:06,000 --> 00:00:24,000
+Native faithful mode preserves the exported footprint convention.
+
+3
+00:00:24,000 --> 00:00:42,000
+Image right maps to +Y; image down maps to +X in the Panda base frame.
+
+4
+00:00:42,000 --> 00:01:00,000
+The complete replay is shown at recorded 1x speed, with a final completed-frame hold.
+
+5
+00:01:00,000 --> 00:01:35,000
+Adjust ink opacity, paper bleed, color and footprint scale. Ink studio is separate from native verification.
+
+6
+00:01:35,000 --> 00:02:00,000
+The cubic brush tuft is illustrative; the original coarse stroke curves are quadratic.
+
+7
+00:02:00,000 --> 00:02:15,000
+The native canvas matches offline replay at 300x300, with all 400 contact samples preserved.
+
+8
+00:02:15,000 --> 00:02:30,000
+Per-glyph software integration; physical force, dynamics and hardware accuracy remain unvalidated.

@@ -1,0 +1,199 @@
+CalliRewrite with Panda and Viser — Version 2
+15-minute presentation with timed speaker notes
+Demo example: dataset image 0, yesterday
+
+Slide 01: CalliRewrite with Panda and Viser
+0:00–0:30 (30 seconds)
+
+This presentation explains what CalliRewrite recovers from a calligraphy image, how its two stages work, and how our local platform replays the result with a Panda robot in Viser. The complete demonstration uses dataset image 0, a character meaning yesterday. We explain the brush and ink, then distinguish successful integration checks from the more limited evidence about learning quality. The current viewer offers native replay and separate visual customization. Its appearance controls do not change the recorded learning results.
+
+Sources:
+- https://arxiv.org/html/2405.15776v1
+- https://github.com/LoYuXr/CalliRewrite
+- panda_calligraphy/docs/callirewrite_verification.json
+- panda_calligraphy/presentation/launch_demo_v2.sh
+
+------------------------------------------------------------------------
+
+Slide 02: What CalliRewrite recovers
+0:30–1:20 (50 seconds)
+
+A calligraphy image records where ink ended up, but it does not directly record the order of strokes, where the pen lifted, or how the writing tool moved. CalliRewrite estimates a plausible sequence of writing actions from that image. Its central feature is learning without labelled writing demonstrations for the target glyph. The official examples cover several fonts and writing tools. A still image can admit more than one plausible order, so we should not interpret the result as a unique reconstruction of the original human motion. The official physical platform shown in this figure is a Dobot. Our Panda scene is a later local extension.
+
+Sources:
+- https://github.com/LoYuXr/CalliRewrite
+- https://luoprojectpage.github.io/callirewrite/
+- Official image: demo/teaser.png
+
+------------------------------------------------------------------------
+
+Slide 03: The original two-stage method
+1:20–2:15 (55 seconds)
+
+Read the official method figure from top to bottom. Coarse sequence extraction uses an image encoder and a recurrent model to propose Bézier stroke segments. Rendering these proposals back into an image supplies a reconstruction signal. The second stage samples the resulting curves and passes them to a simulated writing tool. A soft actor-critic policy then adjusts the control sequence under the tool model. This division matters: the first stage estimates a useful stroke structure, while the second stage adapts the geometry to the behavior of the chosen utensil. In our workflow, extraction and refinement finish before the Viser replay starts.
+
+Sources:
+- https://arxiv.org/html/2405.15776v1
+- https://github.com/LoYuXr/CalliRewrite
+- Official figure: https://luoprojectpage.github.io/callirewrite/static/images/models.png
+
+------------------------------------------------------------------------
+
+Slide 04: Coarse sequence extraction
+2:15–3:20 (65 seconds)
+
+The model works through dynamic image windows. It predicts local quadratic Bézier geometry, a pen state and stroke width, then updates its internal view of the drawing. During training, image reconstruction and regularization encourage plausible segments with useful continuity. Our adapter must recover global image coordinates from the moving windows. It also preserves every inference round and pen-up event. The three pictures show dataset image 0, the character meaning yesterday, its pretrained reconstruction, and the model's colored sequence visualization. This output contains ten decoded stroke groups. That count describes the model's grouping, rather than a claim about the canonical pedagogical stroke count of the character.
+
+Sources:
+- https://github.com/LoYuXr/CalliRewrite
+- seq_extract/test_vectorization.py
+- seq_extract/model_common_test.py
+- panda_calligraphy/callirewrite_io.py
+- panda_calligraphy/docs/callirewrite_verification.json
+
+------------------------------------------------------------------------
+
+Slide 05: Tool-aware refinement
+3:20–4:25 (65 seconds)
+
+The refinement stage uses the official CalliEnv environment. The state summarizes progress along the coarse sequence and properties of the current writing footprint. The SAC policy proposes bounded changes near the coarse path. The tool model produces a footprint, and the reward measures how its marks agree with the input and the desired writing behavior. During training, an exponential moving average also updates the skeleton. That distinction becomes important in our results: a better final drawing can reflect skeleton updates as well as the policy. The repository provides coarse extraction weights. The refinement policies used here were trained locally for the selected glyph and brush, rather than downloaded as a universal Panda controller.
+
+Sources:
+- https://github.com/LoYuXr/CalliRewrite
+- rl_finetune/Callienv/envs/Callienv.py
+- rl_finetune/Callienv/envs/tools.py
+- panda_calligraphy/verify_callirewrite_rl.py
+
+------------------------------------------------------------------------
+
+Slide 06: Our customizable Panda viewer
+4:25–5:15 (50 seconds)
+
+The current Viser platform displays the Panda model, paper, brush and playback controls. Python supplies the URDF-based pose inverse kinematics, stroke lifts, timing, contact geometry and canvas updates, while Viser supplies the browser scene and interface. The complete demonstration uses the character meaning yesterday. Native faithful mode preserves the exported native marks used for quantitative verification. Ink studio exposes visual appearance settings for presentation and exploration. Those settings do not retrain the policy, validate physical ink or improve the recorded native IoU. Extraction runs in TensorFlow, refinement runs in PyTorch, and this lighter viewer reads a saved NPZ. Playback therefore needs no active neural model or CUDA GPU. The scene remains geometric and kinematic, without torque control, full rigid-body dynamics or a calibrated physical brush solver.
+
+Sources:
+- https://viser.studio/main/
+- panda_calligraphy/callirewrite_replay.py
+- panda_calligraphy/panda_replay_kinematics.py
+- panda_calligraphy/README.md
+
+------------------------------------------------------------------------
+
+Slide 07: Image coordinates and robot motion
+5:15–6:15 (60 seconds)
+
+The imported image uses u for columns and v for rows. We place an eighteen-centimetre glyph in the centre of a thirty-six-centimetre sheet. Image-right points along positive Panda Y, while image-up points along negative Panda X. This convention keeps the image upright when viewed from above and avoids reflecting the character. The chart plots the actual imported centreline in that top-view convention. Inverse kinematics converts each target into a robot configuration while keeping the tool down. Between stroke groups, the trajectory adds a twenty-five-millimetre lift. The nominal writing speed is twenty-five millimetres per second, with timing stretched if a URDF joint-speed limit requires it.
+
+Sources:
+- panda_calligraphy/callirewrite_replay.py
+- panda_calligraphy/panda_replay_kinematics.py
+- panda_calligraphy/docs/callirewrite_verification.json
+
+------------------------------------------------------------------------
+
+Slide 08: The deformable brush in Viser
+6:15–7:20 (65 seconds)
+
+This close-up shows the current model-output viewer drawing the character meaning yesterday. The brush has a fixed ferrule and a soft-looking tuft. A cubic spine connects the root to the tip. During contact, the visible tip sits on the paper plane and the lower mesh expands. Heading gives the contact region a direction. The base radius-to-compression conversion is a virtual calibration: radius in metres equals twice the nominal penetration. The geometry updates each frame. Ink studio settings allow visual exploration, while Native faithful keeps the measured raster separate. There is no integrated bristle mass, measured force or validated elastic material model behind this mesh. The cubic chart on the following slide uses a recorded contact state from the original verification data, not a newly fitted physical brush.
+
+Sources:
+- panda_calligraphy/callirewrite_replay.py : tuft_geometry, prepare
+- panda_calligraphy/docs/callirewrite_verification.json
+
+------------------------------------------------------------------------
+
+Slide 09: Why a cubic Bézier curve?
+7:20–8:15 (55 seconds)
+
+A cubic Bézier curve uses four control points. The first and last are the endpoints, while the two intermediate points control the directions near those endpoints. This makes it convenient for a brush: the root can follow the ferrule, the end can touch the paper, and the intervening points create a smooth bend. The graph shows coordinates from an actual contact state in our replay, projected along the footprint heading. The dashed control polygon is a geometric construction. The smooth curve is the spine that the mesh follows. It is inexpensive to evaluate and easy to shape, but it does not by itself solve elastic mechanics. Also distinguish this cubic visual spine from the quadratic curves that CalliRewrite extracts from the glyph.
+
+Sources:
+- https://www.w3.org/TR/SVG/paths.html#PathDataCubicBezierCommands
+- panda_calligraphy/callirewrite_replay.py : tuft_geometry
+- .local_setup/presentation_build_v2/chart_data.json
+
+------------------------------------------------------------------------
+
+Slide 10: Native ink and visual styling
+8:15–9:05 (50 seconds)
+
+The ink and the 3D tuft have different jobs. Each saved drawing sample contains an anchor, radius, length and heading. The source-faithful replay computes the achieved Panda tip through forward kinematics and places the native footprint on a two-dimensional canvas. It sends that canvas to Viser as the paper texture. Stamps occur only at exported contact samples, and extra motion interpolation adds no native ink. The released renderer combines triangular geometry with a disk and passes a normalized radius into a pixel-radius operation. This unit convention may contribute to the jagged marks, but that contribution has not been separately tested. Native faithful retains the source convention. Ink studio exposes ink color and opacity, width and paper absorbency, as well as illustrative tuft stiffness and splay controls. These appearance changes do not retrain the policy. Changes redraw the accumulated ink while preserving the saved path and solved poses. Studio images are separate from the outputs used for native IoU or exact replay checks, and the stiffness control does not validate material stiffness or contact force.
+
+Sources:
+- panda_calligraphy/callirewrite_replay.py : footprint_points, stamp, Replay.deposit
+- rl_finetune/Callienv/envs/tools.py
+- panda_calligraphy/docs/callirewrite_verification.json
+
+------------------------------------------------------------------------
+
+Slide 11: Complete drawing demonstration
+9:05–11:35 (150 seconds)
+
+Play the embedded two-minute-thirty-second video. The complete example is dataset image 0, the character meaning yesterday. After a six-second introduction, the video shows the complete native trajectory at recorded speed, followed by a thirty-five-second controls chapter, a twenty-five-second brush close-up and a final native-result comparison. The main path lasts about fifty seconds and contains ten decoded stroke groups with four hundred exported contact samples. Point out the brush lifts between stroke groups and the accumulating ink. In the close-up, show the contact tip and bending lower tuft. Treat studio changes as visual demonstrations: they do not constitute new model inference, policy learning, a higher measured IoU or calibrated physical behavior. The video has captions and no soundtrack, so narration can accompany it. Use the standalone v2 MP4 if the presentation viewer does not support embedded playback.
+
+Sources:
+- panda_calligraphy/callirewrite_replay.py
+- panda_calligraphy/presentation/launch_demo_v2.sh
+- panda_calligraphy/presentation/capture_provenance_v2.json
+
+------------------------------------------------------------------------
+
+Slide 12: Replay preserves the exported drawing
+11:35–12:25 (50 seconds)
+
+The strongest result from this pilot concerns integration fidelity. These images show the native exported drawing and the Panda-achieved raster for dataset image 0. Their foreground masks match exactly at three hundred by three hundred pixels. The second refined example also achieves exact native-mask agreement, and its recorded live browser canvas matches the offline replay. These are the stored source-faithful verification results. Ink studio appearance settings are outside this comparison. We tested both coarse and refined paths for both glyphs, giving four trajectories. The checks cover pose convergence, joint limits, nominal joint speeds, ferrule clearance and ink scheduling. We also sampled intermediate joint motion. This does not establish robot collision safety or physical accuracy. One hundred percent here means agreement with the exported drawing, rather than agreement with the desired input character.
+
+Sources:
+- panda_calligraphy/docs/callirewrite_verification.json
+- .local_setup/verification/integration/interpolation_check.json
+
+------------------------------------------------------------------------
+
+Slide 13: What refinement improved
+12:25–13:25 (60 seconds)
+
+This chart separates four conditions using the same native brush renderer. The two colors represent the two glyphs. Comparing fresh coarse geometry with zero action against the final EMA-plus-policy output gives gains of about one point one four and two point nine four percentage points. However, replaying the training-updated skeleton with zero actions retains most of that gain. Applying the trained policy to fresh coarse geometry slightly worsens both glyphs. On the selected EMA skeleton, the policy helps one glyph and hurts the other. The runs used fifty thousand and twenty thousand collected steps, one seed and selection on the same glyph. Our runner also uses separate critic backbones and bounded settings, so these results are a pilot rather than a complete reproduction of the paper.
+
+Sources:
+- panda_calligraphy/docs/callirewrite_verification.json
+- panda_calligraphy/verify_callirewrite_rl.py
+- panda_calligraphy/ablate_callirewrite_rl.py
+
+------------------------------------------------------------------------
+
+Slide 14: How to run the demonstration
+13:25–14:15 (50 seconds)
+
+At the repository root, run the v2 launcher. It selects the existing viewer environment, clears inherited Python paths and loads the saved dataset-image-0 trajectory for the character meaning yesterday. Open the printed localhost URL, using port 8086 by default, and use the playback controls. Native faithful preserves the original native ink convention. Ink studio exposes ink color, opacity, width and paper absorbency. Tuft stiffness and splay shape the illustrative brush. Changing the ink settings redraws the accumulated part of the drawing, while the saved trajectory and solved Panda poses stay unchanged. Keep those appearance changes separate from the quantitative comparison. A saved trajectory needs no GPU for playback. For another character, run pretrained extraction on a square black-on-white image, then supply its saved output to the viewer. Tool-aware refinement is an additional experiment rather than a requirement for coarse replay.
+
+Sources:
+- panda_calligraphy/presentation/launch_demo_v2.sh
+- panda_calligraphy/presentation/README_v2.md
+- panda_calligraphy/verify_callirewrite_extraction.py
+
+------------------------------------------------------------------------
+
+Slide 15: Feasibility and remaining validation
+14:15–14:50 (35 seconds)
+
+The practical outcome is that we can connect the pretrained extractor, a bounded refinement run and a Panda visualization without changing the official model code. The exported marks survive the robot replay exactly in the tested cases. The method-quality conclusion is narrower. We still need distinct held-out glyphs, repeated seeds and controlled comparisons of the renderer's radius convention. A physical Panda experiment would also need a measured tool transform, brush radius-height calibration, collision and acceleration checks, and an appropriate controller. The current mesh and kinematic scene provide a useful way to inspect the workflow and communicate it. They do not yet predict the ink left by a real brush with validated physical accuracy.
+
+Sources:
+- panda_calligraphy/docs/callirewrite_verification.json
+- panda_calligraphy/README.md
+
+------------------------------------------------------------------------
+
+Slide 16: References
+14:50–15:00 (10 seconds)
+
+The paper, official repository and primary software references are listed here. Each content slide also includes sources in its speaker notes. The local results are documented separately so that the audience can distinguish published claims from our pilot measurements.
+
+Sources:
+- https://arxiv.org/html/2405.15776v1
+- https://github.com/LoYuXr/CalliRewrite
+- https://viser.studio/main/
+- https://www.w3.org/TR/SVG/paths.html#PathDataCubicBezierCommands
+- panda_calligraphy/docs/callirewrite_verification.json
+
+------------------------------------------------------------------------

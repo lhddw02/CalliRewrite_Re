@@ -1,0 +1,31 @@
+1
+00:00:00,000 --> 00:00:06,000
+Actual Viser captures and saved model outputs throughout this demonstration.
+
+2
+00:00:06,000 --> 00:00:28,000
+Released coarse extraction supplies the initial curves; per-glyph refinement adjusts the brush output.
+
+3
+00:00:28,000 --> 00:00:50,000
+The 18 cm glyph is mapped to the horizontal paper in the Panda base frame.
+
+4
+00:00:50,000 --> 00:01:10,000
+A near-vertical brush pose is solved with the cached Panda URDF and joint limits.
+
+5
+00:01:10,000 --> 00:01:33,000
+The brush lifts between stroke groups. Pen-up travel adds no ink.
+
+6
+00:01:33,000 --> 00:01:56,000
+The brush shape is illustrative; exported ink footprints preserve the released renderer’s convention.
+
+7
+00:01:56,000 --> 00:02:15,000
+Scripted yi / legacy brush: a hand-authored path, separate from CalliRewrite prediction.
+
+8
+00:02:15,000 --> 00:02:30,000
+The completed Viser ink matches offline replay. Physical handwriting accuracy is not established.

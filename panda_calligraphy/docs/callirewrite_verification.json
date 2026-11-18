@@ -1,0 +1,1044 @@
+{
+  "date": "2026-11-17",
+  "scope": "Two-glyph feasibility pilot; same-glyph checkpoint selection, no held-out or hardware claim",
+  "cases": {
+    "glyph_0": {
+      "extraction": {
+        "status": "passed",
+        "input_source": ".local_setup/verification/coarse_input/0.png",
+        "input_sha256": "c0a53ce5cf6619e79469bc8e73bfc9a605160d5b3f903490593abe463b104531",
+        "method": "Released test_vectorization.main_testing; unmodified inference/rendering functions",
+        "model": "new_train_phase_2/p2s-30000",
+        "perceptual_model": "iter_18.tfmodel",
+        "device": "GPU:0",
+        "python": "3.8.15 | packaged by conda-forge | (default, Nov 22 2022, 08:46:39) \n[GCC 10.4.0]",
+        "tensorflow": "2.10.0",
+        "inference_and_render_seconds": 2.3497447054833174,
+        "npz": ".local_setup/verification/integration/coarse/runs/glyph_0/sampling/__new_train_phase_2/seq_data/0.npz",
+        "image_size": 256,
+        "rows": 28,
+        "draw_rows": 18,
+        "move_rows": 10,
+        "stroke_groups": 10,
+        "round_length": [
+          28
+        ],
+        "renderer_comparison": {
+          "foreground_iou_at_0_5": 1.0,
+          "mean_absolute_error": 6.864883471280336e-05,
+          "max_absolute_error": 0.00196683406829834,
+          "same_8bit_pixels_fraction": 0.99993896484375,
+          "sampled_xy_radius_iou_at_0_5": 0.9585729937003561,
+          "iou_quantization": "Both images quantized to 8-bit grayscale before thresholding at foreground >= 0.5"
+        },
+        "rl_pair_dir": ".local_setup/verification/integration/coarse/rl_input/glyph_0",
+        "width_mapping": "Quantized official high-resolution circle radius, divided by two for resize, multiplied by area-equivalent inverse crop scale and divided by image_size. Rendering radius, not calibrated pressure."
+      },
+      "refinement": {
+        "status": "passed",
+        "device": "cuda",
+        "gpu": "NVIDIA GeForce RTX 3090 Ti",
+        "scope": "Per-glyph optimization; best evaluation selected on the same glyph, not held-out generalization.",
+        "baseline": {
+          "iou": 0.6148005719075087,
+          "chamfer_symmetric_mean_pixels": 2.9035658836364746,
+          "chamfer_normalized_by_width": 0.009678552945454916,
+          "xor_pixels": 7813,
+          "native_canvas_width": 300,
+          "target_ink_pixels": 19776,
+          "rendered_ink_pixels": 12977,
+          "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+          "steps": 400,
+          "reward_sum": -661.4865201489138,
+          "mean_action_norm": 0.0,
+          "stroke_count": 10
+        },
+        "refined": {
+          "iou": 0.6262220501403543,
+          "chamfer_symmetric_mean_pixels": 2.836444139480591,
+          "chamfer_normalized_by_width": 0.009454813798268636,
+          "xor_pixels": 7723,
+          "native_canvas_width": 300,
+          "target_ink_pixels": 19776,
+          "rendered_ink_pixels": 13825,
+          "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+          "steps": 400,
+          "reward_sum": -694.9243010409938,
+          "mean_action_norm": 0.505039056846872,
+          "stroke_count": 10
+        },
+        "iou_change": 0.011421478232845561,
+        "improved_iou": true,
+        "selected": {
+          "variant": "training_ema",
+          "steps": 30000,
+          "metrics": {
+            "iou": 0.6262220501403543,
+            "chamfer_symmetric_mean_pixels": 2.836444139480591,
+            "chamfer_normalized_by_width": 0.009454813798268636,
+            "xor_pixels": 7723,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 19776,
+            "rendered_ink_pixels": 13825,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 400,
+            "reward_sum": -694.9243010409938,
+            "mean_action_norm": 0.505039056846872,
+            "stroke_count": 10
+          }
+        },
+        "collected_training_steps": 50000,
+        "random_warmup_steps": 512,
+        "gradient_updates": 50000,
+        "wall_seconds_including_evaluations": 430.23814990743995,
+        "cuda_peak_allocated_bytes": 26563584,
+        "cuda_peak_reserved_bytes": 31457280,
+        "checkpoint_roundtrip_metrics_identical": true,
+        "baseline_export": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_0_extended/baseline/trajectory.npz",
+        "refined_export": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_0_extended/refined/trajectory.npz",
+        "policy_checkpoint": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_0_extended/best_policy.pth",
+        "provenance": {
+          "glyph_id": "glyph_0",
+          "experiment": "per-glyph optimization, not held-out generalization",
+          "input_image": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_0/0.png",
+          "input_image_sha256": "c0a53ce5cf6619e79469bc8e73bfc9a605160d5b3f903490593abe463b104531",
+          "input_global_curves": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_0/0.npy",
+          "input_global_curves_sha256": "3ce62f7eeaae47caa51cea2791294593ab5d41566d9cc01bdd3904c8ec5b7fc6",
+          "config": {
+            "actor_lr": 3e-05,
+            "critic_lr": 0.0001,
+            "gamma": 0.9,
+            "tau": 0.005,
+            "independent_critic_backbones": true,
+            "actor_hidden": [
+              128,
+              256
+            ],
+            "critic_hidden": [
+              128,
+              256,
+              256
+            ],
+            "actor_distribution_hidden": [
+              64
+            ],
+            "batch_size": 256,
+            "buffer_size": 32768,
+            "update_per_step": 1,
+            "image_iter": 10,
+            "start_update": 1,
+            "ema_gamma": 0.9,
+            "seed": 42,
+            "requested_steps": 50000,
+            "eval_every": 2000,
+            "warmup_steps": 512,
+            "max_training_seconds": 600.0
+          },
+          "reward": "Unmodified released CalliEnv.calc_reward",
+          "argv": [
+            ".local_setup/verify_integration_rl.py",
+            "--input-dir",
+            ".local_setup/verification/integration/coarse/rl_input/glyph_0",
+            "--glyph-id",
+            "glyph_0",
+            "--output",
+            ".local_setup/verification/integration/rl/glyph_0_extended",
+            "--steps",
+            "50000",
+            "--eval-every",
+            "2000",
+            "--max-training-seconds",
+            "600",
+            "--require-gpu"
+          ],
+          "verification_runner_sha256": "3e9ccc0d2cb766de36952c97d4b9b321df417d135e8d2ec8a78a0721b094017a"
+        },
+        "ablations": {
+          "zero_action_on_selected_ema_skeleton": {
+            "iou": 0.6328767123287671,
+            "chamfer_symmetric_mean_pixels": 2.757437229156494,
+            "chamfer_normalized_by_width": 0.009191457430521648,
+            "xor_pixels": 7504,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 19776,
+            "rendered_ink_pixels": 13600,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 400,
+            "reward_sum": -590.3101096625843,
+            "mean_action_norm": 0.0,
+            "stroke_count": 10
+          },
+          "selected_policy_on_fresh_coarse_skeleton": {
+            "iou": 0.6078412249475789,
+            "chamfer_symmetric_mean_pixels": 2.9315543174743652,
+            "chamfer_normalized_by_width": 0.00977184772491455,
+            "xor_pixels": 8042,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 19776,
+            "rendered_ink_pixels": 13196,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 400,
+            "reward_sum": -575.542000228016,
+            "mean_action_norm": 0.5022840174334123,
+            "stroke_count": 10
+          },
+          "selected_policy_on_selected_ema_skeleton": {
+            "iou": 0.6262220501403543,
+            "chamfer_symmetric_mean_pixels": 2.836444139480591,
+            "chamfer_normalized_by_width": 0.009454813798268636,
+            "xor_pixels": 7723,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 19776,
+            "rendered_ink_pixels": 13825,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 400,
+            "reward_sum": -694.9243010409938,
+            "mean_action_norm": 0.505039056846872,
+            "stroke_count": 10
+          },
+          "same_checkpoint_combined_result_reproduced_exactly": true,
+          "additional_training_steps": 0,
+          "policy_effect_on_selected_ema_skeleton_iou": -0.006654662188412819,
+          "policy_effect_on_fresh_coarse_skeleton_iou": -0.006959346959929835,
+          "interpretation": "Fresh independent environments; EMA disabled during each evaluation. The combined policy/EMA candidate was selected by same-glyph IoU. These conditional comparisons separate the saved policy's immediate action effect from the selected EMA geometry; EMA geometry itself was produced during training and is not an independent optimization method."
+        },
+        "skeleton_consistency": {
+          "coarse_skeleton_shape": [
+            402,
+            3
+          ],
+          "selected_skeleton_shape": [
+            402,
+            2
+          ],
+          "same_skeleton_point_count": true,
+          "same_stroke_start_flags": true,
+          "same_per_sample_stroke_ids": true,
+          "same_per_sample_skeleton_indices": true,
+          "same_contact_sample_count": true,
+          "skeleton_displacement_normalized_image_width_mean": 0.002176141329356266,
+          "skeleton_displacement_normalized_image_width_max": 0.008394015353927075,
+          "skeleton_displacement_native_pixels_mean": 0.6528423988068799,
+          "skeleton_displacement_native_pixels_max": 2.5182046061781223,
+          "geometry_note": "Sequence consistency only; this does not establish semantic correctness of the extracted stroke order."
+        }
+      },
+      "panda_coarse": {
+        "source": {
+          "source_kind": "coarse",
+          "footprint": "coarse_circle",
+          "width_mapping": "Quantized official high-resolution circle radius, divided by two for resize, multiplied by area-equivalent inverse crop scale and divided by image_size. Rendering radius, not calibrated pressure.",
+          "source_file": "/data/CalliRewrite/.local_setup/verification/integration/coarse/runs/glyph_0/sampling/__new_train_phase_2/seq_data/0.npz",
+          "source_sha256": "c74be010f059a1d358aa21f174f59f7e99ada75e9ed9786ebbf94abb081bed22"
+        },
+        "scope": "kinematic replay; no dynamics or mesh collision validation",
+        "contact_samples": 1560,
+        "stroke_groups": 10,
+        "trajectory_samples": 2084,
+        "duration_s": 42.8322653597751,
+        "glyph_side_m": 0.18,
+        "paper_side_m": 0.36,
+        "image_to_base": "X=.55+side*(v-.5), Y=side*(u-.5), Z=.002-compression",
+        "virtual_calibration": "radius_m = 2 * compression_m; illustrative, not physical calibration",
+        "max_position_error_m": 9.427808556798954e-09,
+        "max_orientation_error_rad": 5.6004406692155805e-08,
+        "minimum_joint_limit_margin_rad": 0.579953204557015,
+        "max_joint_velocity_ratio": 0.1550240662897361,
+        "minimum_ferrule_clearance_m": 0.039974262247327044,
+        "achieved_contact_samples": 1560,
+        "pen_up_ink_samples": 0,
+        "source_to_achieved": {
+          "iou": 1.0,
+          "symmetric_contour_distance_px": 0.0,
+          "different_pixels": 0,
+          "resolution": 300
+        },
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "raster_convention": "approximate sampled coarse circles; exact extraction raster is evaluated separately",
+        "checks": {
+          "all_ik_samples_converged": true,
+          "finite_solution": true,
+          "position_error_below_20_um": true,
+          "orientation_error_below_0_01_rad": true,
+          "inside_joint_limits": true,
+          "within_joint_velocity_limits": true,
+          "rigid_ferrule_above_paper": true,
+          "all_expected_contacts_achieved": true,
+          "no_ink_during_pen_up": true,
+          "nonempty_drawing": true,
+          "source_achieved_iou_at_least_0_98": true
+        },
+        "status": "passed",
+        "target_to_source": {
+          "iou": 0.883812881097561,
+          "symmetric_contour_distance_px": 1.0445800973541126,
+          "different_pixels": 2439,
+          "resolution": 300
+        },
+        "target_to_achieved": {
+          "iou": 0.883812881097561,
+          "symmetric_contour_distance_px": 1.0445800973541126,
+          "different_pixels": 2439,
+          "resolution": 300
+        }
+      },
+      "panda_refined": {
+        "source": {
+          "glyph_id": "glyph_0",
+          "experiment": "per-glyph optimization, not held-out generalization",
+          "input_image": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_0/0.png",
+          "input_image_sha256": "c0a53ce5cf6619e79469bc8e73bfc9a605160d5b3f903490593abe463b104531",
+          "input_global_curves": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_0/0.npy",
+          "input_global_curves_sha256": "3ce62f7eeaae47caa51cea2791294593ab5d41566d9cc01bdd3904c8ec5b7fc6",
+          "config": {
+            "actor_lr": 3e-05,
+            "critic_lr": 0.0001,
+            "gamma": 0.9,
+            "tau": 0.005,
+            "independent_critic_backbones": true,
+            "actor_hidden": [
+              128,
+              256
+            ],
+            "critic_hidden": [
+              128,
+              256,
+              256
+            ],
+            "actor_distribution_hidden": [
+              64
+            ],
+            "batch_size": 256,
+            "buffer_size": 32768,
+            "update_per_step": 1,
+            "image_iter": 10,
+            "start_update": 1,
+            "ema_gamma": 0.9,
+            "seed": 42,
+            "requested_steps": 50000,
+            "eval_every": 2000,
+            "warmup_steps": 512,
+            "max_training_seconds": 600.0
+          },
+          "reward": "Unmodified released CalliEnv.calc_reward",
+          "argv": [
+            ".local_setup/verify_integration_rl.py",
+            "--input-dir",
+            ".local_setup/verification/integration/coarse/rl_input/glyph_0",
+            "--glyph-id",
+            "glyph_0",
+            "--output",
+            ".local_setup/verification/integration/rl/glyph_0_extended",
+            "--steps",
+            "50000",
+            "--eval-every",
+            "2000",
+            "--max-training-seconds",
+            "600",
+            "--require-gpu"
+          ],
+          "verification_runner_sha256": "3e9ccc0d2cb766de36952c97d4b9b321df417d135e8d2ec8a78a0721b094017a",
+          "policy_checkpoint": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_0_extended/best_policy.pth",
+          "policy_sha256": "b76496b1c724fae90db25aee3c5687cb497dfe2a36f3a0ba1b519a1a713b8d1b",
+          "selected": {
+            "variant": "training_ema",
+            "steps": 30000,
+            "metrics": {
+              "iou": 0.6262220501403543,
+              "chamfer_symmetric_mean_pixels": 2.836444139480591,
+              "chamfer_normalized_by_width": 0.009454813798268636,
+              "xor_pixels": 7723,
+              "native_canvas_width": 300,
+              "target_ink_pixels": 19776,
+              "rendered_ink_pixels": 13825,
+              "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+              "steps": 400,
+              "reward_sum": -694.9243010409938,
+              "mean_action_norm": 0.505039056846872,
+              "stroke_count": 10
+            }
+          },
+          "schema": "callirewrite.native-brush-contact.v1",
+          "source_kind": "refined",
+          "coordinate_order": "u=image column, v=image row",
+          "coordinate_units": "normalized image width",
+          "heading_units": "degrees",
+          "xy_uv_semantics": "Exact native rendered/reward footprint anchor from calc_four_points, paired with SAME returned state's radius/length/heading.",
+          "requested_xy_uv_semantics": "Separate step() action-offset skeleton request; differs from native footprint anchor in official code.",
+          "native_canvas_width": 300,
+          "native_stamp_count": 400,
+          "native_rasterizer_call_count": 789,
+          "native_raster_convention": "tools.Writing_Brush.draw_canvas: integer center and polygon vertices multiplied by canvas_width; disk radius is normalized current_r passed directly as pixel radius (preserved official artifact).",
+          "native_reconstruction_exact": true,
+          "timing": "No physical timestamps exported; each row is one official environment contact sample.",
+          "stroke_id_semantics": "Contiguous zero-based stroke from original pt_idx and current skeleton index; no bridge across ids.",
+          "ema_during_evaluation": false,
+          "source_hashes": {
+            "rl_finetune/Callienv/envs/Callienv.py": "2495d403a436a648122f29b340dee6b324a4dd3570db3570d7ae9978b8ce2244",
+            "rl_finetune/Callienv/envs/tools.py": "c6ecb61ce0e036a97e9bac96aa8bbb1da7cf6c0f561add47538d699e612d82fe"
+          },
+          "source_file": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_0_extended/refined/trajectory.npz",
+          "source_sha256": "497f7f66b952cab111350c4e7d8e91de49b15145a34f601abe0921e6cf503355"
+        },
+        "scope": "kinematic replay; no dynamics or mesh collision validation",
+        "contact_samples": 400,
+        "stroke_groups": 10,
+        "trajectory_samples": 915,
+        "duration_s": 49.980981064627024,
+        "glyph_side_m": 0.18,
+        "paper_side_m": 0.36,
+        "image_to_base": "X=.55+side*(v-.5), Y=side*(u-.5), Z=.002-compression",
+        "virtual_calibration": "radius_m = 2 * compression_m; illustrative, not physical calibration",
+        "max_position_error_m": 5.068597938253105e-09,
+        "max_orientation_error_rad": 3.486701270350735e-08,
+        "minimum_joint_limit_margin_rad": 0.5775164293553225,
+        "max_joint_velocity_ratio": 0.15467627918832105,
+        "minimum_ferrule_clearance_m": 0.040900111905803435,
+        "achieved_contact_samples": 400,
+        "pen_up_ink_samples": 0,
+        "source_to_achieved": {
+          "iou": 1.0,
+          "symmetric_contour_distance_px": 0.0,
+          "different_pixels": 0,
+          "resolution": 300
+        },
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "raster_convention": "native integer triangle plus normalized-radius disk",
+        "native_to_source": {
+          "iou": 1.0,
+          "symmetric_contour_distance_px": 0.0,
+          "different_pixels": 0,
+          "resolution": 300
+        },
+        "checks": {
+          "all_ik_samples_converged": true,
+          "finite_solution": true,
+          "position_error_below_20_um": true,
+          "orientation_error_below_0_01_rad": true,
+          "inside_joint_limits": true,
+          "within_joint_velocity_limits": true,
+          "rigid_ferrule_above_paper": true,
+          "all_expected_contacts_achieved": true,
+          "no_ink_during_pen_up": true,
+          "nonempty_drawing": true,
+          "source_achieved_iou_at_least_0_98": true,
+          "export_matches_official_native_raster": true
+        },
+        "status": "passed",
+        "target_to_source": {
+          "iou": 0.6262121799844841,
+          "symmetric_contour_distance_px": 2.8441947543161437,
+          "different_pixels": 7709,
+          "resolution": 300
+        },
+        "target_to_achieved": {
+          "iou": 0.6262121799844841,
+          "symmetric_contour_distance_px": 2.8441947543161437,
+          "different_pixels": 7709,
+          "resolution": 300
+        }
+      }
+    },
+    "glyph_6": {
+      "extraction": {
+        "status": "passed",
+        "input_source": "rl_finetune/data/test_data/6.png",
+        "input_sha256": "554ed02d5338b9233b00be79068616f211c60910012918fd4da5ca009ba2dfec",
+        "method": "Released test_vectorization.main_testing; unmodified inference/rendering functions",
+        "model": "new_train_phase_2/p2s-30000",
+        "perceptual_model": "iter_18.tfmodel",
+        "device": "GPU:0",
+        "python": "3.8.15 | packaged by conda-forge | (default, Nov 22 2022, 08:46:39) \n[GCC 10.4.0]",
+        "tensorflow": "2.10.0",
+        "inference_and_render_seconds": 2.415220243856311,
+        "npz": ".local_setup/verification/integration/coarse/runs/glyph_6/sampling/__new_train_phase_2/seq_data/0.npz",
+        "image_size": 256,
+        "rows": 47,
+        "draw_rows": 25,
+        "move_rows": 22,
+        "stroke_groups": 20,
+        "round_length": [
+          47
+        ],
+        "renderer_comparison": {
+          "foreground_iou_at_0_5": 1.0,
+          "mean_absolute_error": 0.00010590597958071157,
+          "max_absolute_error": 0.001972377300262451,
+          "same_8bit_pixels_fraction": 0.999908447265625,
+          "sampled_xy_radius_iou_at_0_5": 0.9531720430107526,
+          "iou_quantization": "Both images quantized to 8-bit grayscale before thresholding at foreground >= 0.5"
+        },
+        "rl_pair_dir": ".local_setup/verification/integration/coarse/rl_input/glyph_6",
+        "width_mapping": "Quantized official high-resolution circle radius, divided by two for resize, multiplied by area-equivalent inverse crop scale and divided by image_size. Rendering radius, not calibrated pressure."
+      },
+      "refinement": {
+        "status": "passed",
+        "device": "cuda",
+        "gpu": "NVIDIA GeForce RTX 3090 Ti",
+        "scope": "Per-glyph optimization; best evaluation selected on the same glyph, not held-out generalization.",
+        "baseline": {
+          "iou": 0.533678756476684,
+          "chamfer_symmetric_mean_pixels": 2.859964370727539,
+          "chamfer_normalized_by_width": 0.009533214569091796,
+          "xor_pixels": 12510,
+          "native_canvas_width": 300,
+          "target_ink_pixels": 26087,
+          "rendered_ink_pixels": 15057,
+          "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+          "steps": 648,
+          "reward_sum": -1362.1920993469137,
+          "mean_action_norm": 0.0,
+          "stroke_count": 20
+        },
+        "refined": {
+          "iou": 0.5630773724759922,
+          "chamfer_symmetric_mean_pixels": 2.687629461288452,
+          "chamfer_normalized_by_width": 0.008958764870961507,
+          "xor_pixels": 11966,
+          "native_canvas_width": 300,
+          "target_ink_pixels": 26087,
+          "rendered_ink_pixels": 16721,
+          "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+          "steps": 648,
+          "reward_sum": -1638.5155214866304,
+          "mean_action_norm": 0.7724394847029521,
+          "stroke_count": 20
+        },
+        "iou_change": 0.029398615999308264,
+        "improved_iou": true,
+        "selected": {
+          "variant": "training_ema",
+          "steps": 18000,
+          "metrics": {
+            "iou": 0.5630773724759922,
+            "chamfer_symmetric_mean_pixels": 2.687629461288452,
+            "chamfer_normalized_by_width": 0.008958764870961507,
+            "xor_pixels": 11966,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 26087,
+            "rendered_ink_pixels": 16721,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 648,
+            "reward_sum": -1638.5155214866304,
+            "mean_action_norm": 0.7724394847029521,
+            "stroke_count": 20
+          }
+        },
+        "collected_training_steps": 20000,
+        "random_warmup_steps": 512,
+        "gradient_updates": 20000,
+        "wall_seconds_including_evaluations": 216.57164838723838,
+        "cuda_peak_allocated_bytes": 26563584,
+        "cuda_peak_reserved_bytes": 31457280,
+        "checkpoint_roundtrip_metrics_identical": true,
+        "baseline_export": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_6/baseline/trajectory.npz",
+        "refined_export": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_6/refined/trajectory.npz",
+        "policy_checkpoint": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_6/best_policy.pth",
+        "provenance": {
+          "glyph_id": "glyph_6",
+          "experiment": "per-glyph optimization, not held-out generalization",
+          "input_image": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_6/0.png",
+          "input_image_sha256": "554ed02d5338b9233b00be79068616f211c60910012918fd4da5ca009ba2dfec",
+          "input_global_curves": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_6/0.npy",
+          "input_global_curves_sha256": "5fc1aa286afc2e66eb8fead6a00580733121fb1d5177dd785090a7ba6fb348f8",
+          "config": {
+            "actor_lr": 3e-05,
+            "critic_lr": 0.0001,
+            "gamma": 0.9,
+            "tau": 0.005,
+            "independent_critic_backbones": true,
+            "actor_hidden": [
+              128,
+              256
+            ],
+            "critic_hidden": [
+              128,
+              256,
+              256
+            ],
+            "actor_distribution_hidden": [
+              64
+            ],
+            "batch_size": 256,
+            "buffer_size": 32768,
+            "update_per_step": 1,
+            "image_iter": 10,
+            "start_update": 1,
+            "ema_gamma": 0.9,
+            "seed": 42,
+            "requested_steps": 20000,
+            "eval_every": 2000,
+            "warmup_steps": 512,
+            "max_training_seconds": 420.0
+          },
+          "reward": "Unmodified released CalliEnv.calc_reward",
+          "argv": [
+            ".local_setup/verify_integration_rl.py",
+            "--input-dir",
+            ".local_setup/verification/integration/coarse/rl_input/glyph_6",
+            "--glyph-id",
+            "glyph_6",
+            "--output",
+            ".local_setup/verification/integration/rl/glyph_6",
+            "--steps",
+            "20000",
+            "--eval-every",
+            "2000",
+            "--max-training-seconds",
+            "420",
+            "--require-gpu"
+          ],
+          "verification_runner_sha256": "3e9ccc0d2cb766de36952c97d4b9b321df417d135e8d2ec8a78a0721b094017a"
+        },
+        "ablations": {
+          "zero_action_on_selected_ema_skeleton": {
+            "iou": 0.5587986307924473,
+            "chamfer_symmetric_mean_pixels": 2.714021682739258,
+            "chamfer_normalized_by_width": 0.009046738942464192,
+            "xor_pixels": 11987,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 26087,
+            "rendered_ink_pixels": 16264,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 648,
+            "reward_sum": -1265.4174601013085,
+            "mean_action_norm": 0.0,
+            "stroke_count": 20
+          },
+          "selected_policy_on_fresh_coarse_skeleton": {
+            "iou": 0.5325362748001184,
+            "chamfer_symmetric_mean_pixels": 2.8699822425842285,
+            "chamfer_normalized_by_width": 0.009566607475280762,
+            "xor_pixels": 12629,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 26087,
+            "rendered_ink_pixels": 15316,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 648,
+            "reward_sum": -1430.6535949622883,
+            "mean_action_norm": 0.7746710844544901,
+            "stroke_count": 20
+          },
+          "selected_policy_on_selected_ema_skeleton": {
+            "iou": 0.5630773724759922,
+            "chamfer_symmetric_mean_pixels": 2.687629461288452,
+            "chamfer_normalized_by_width": 0.008958764870961507,
+            "xor_pixels": 11966,
+            "native_canvas_width": 300,
+            "target_ink_pixels": 26087,
+            "rendered_ink_pixels": 16721,
+            "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+            "steps": 648,
+            "reward_sum": -1638.5155214866304,
+            "mean_action_norm": 0.7724394847029521,
+            "stroke_count": 20
+          },
+          "same_checkpoint_combined_result_reproduced_exactly": true,
+          "additional_training_steps": 0,
+          "policy_effect_on_selected_ema_skeleton_iou": 0.004278741683544918,
+          "policy_effect_on_fresh_coarse_skeleton_iou": -0.0011424816765654988,
+          "interpretation": "Fresh independent environments; EMA disabled during each evaluation. The combined policy/EMA candidate was selected by same-glyph IoU. These conditional comparisons separate the saved policy's immediate action effect from the selected EMA geometry; EMA geometry itself was produced during training and is not an independent optimization method."
+        },
+        "skeleton_consistency": {
+          "coarse_skeleton_shape": [
+            650,
+            3
+          ],
+          "selected_skeleton_shape": [
+            650,
+            2
+          ],
+          "same_skeleton_point_count": true,
+          "same_stroke_start_flags": true,
+          "same_per_sample_stroke_ids": true,
+          "same_per_sample_skeleton_indices": true,
+          "same_contact_sample_count": true,
+          "skeleton_displacement_normalized_image_width_mean": 0.0031617188994585107,
+          "skeleton_displacement_normalized_image_width_max": 0.0104237023713328,
+          "skeleton_displacement_native_pixels_mean": 0.9485156698375532,
+          "skeleton_displacement_native_pixels_max": 3.12711071139984,
+          "geometry_note": "Sequence consistency only; this does not establish semantic correctness of the extracted stroke order."
+        }
+      },
+      "panda_coarse": {
+        "source": {
+          "source_kind": "coarse",
+          "footprint": "coarse_circle",
+          "width_mapping": "Quantized official high-resolution circle radius, divided by two for resize, multiplied by area-equivalent inverse crop scale and divided by image_size. Rendering radius, not calibrated pressure.",
+          "source_file": "/data/CalliRewrite/.local_setup/verification/integration/coarse/runs/glyph_6/sampling/__new_train_phase_2/seq_data/0.npz",
+          "source_sha256": "1db05b2f1491bb0361a14dc89e08521865a67fd938ea165a8d87a21d75ddf445"
+        },
+        "scope": "kinematic replay; no dynamics or mesh collision validation",
+        "contact_samples": 2151,
+        "stroke_groups": 20,
+        "trajectory_samples": 3110,
+        "duration_s": 66.36308070925794,
+        "glyph_side_m": 0.18,
+        "paper_side_m": 0.36,
+        "image_to_base": "X=.55+side*(v-.5), Y=side*(u-.5), Z=.002-compression",
+        "virtual_calibration": "radius_m = 2 * compression_m; illustrative, not physical calibration",
+        "max_position_error_m": 9.822330523642527e-09,
+        "max_orientation_error_rad": 5.5499174316043685e-08,
+        "minimum_joint_limit_margin_rad": 0.5722124635397638,
+        "max_joint_velocity_ratio": 0.1475941804179264,
+        "minimum_ferrule_clearance_m": 0.04093774405709198,
+        "achieved_contact_samples": 2151,
+        "pen_up_ink_samples": 0,
+        "source_to_achieved": {
+          "iou": 1.0,
+          "symmetric_contour_distance_px": 0.0,
+          "different_pixels": 0,
+          "resolution": 300
+        },
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "raster_convention": "approximate sampled coarse circles; exact extraction raster is evaluated separately",
+        "checks": {
+          "all_ik_samples_converged": true,
+          "finite_solution": true,
+          "position_error_below_20_um": true,
+          "orientation_error_below_0_01_rad": true,
+          "inside_joint_limits": true,
+          "within_joint_velocity_limits": true,
+          "rigid_ferrule_above_paper": true,
+          "all_expected_contacts_achieved": true,
+          "no_ink_during_pen_up": true,
+          "nonempty_drawing": true,
+          "source_achieved_iou_at_least_0_98": true
+        },
+        "status": "passed",
+        "target_to_source": {
+          "iou": 0.8013554322635017,
+          "symmetric_contour_distance_px": 1.5273625491323204,
+          "different_pixels": 5657,
+          "resolution": 300
+        },
+        "target_to_achieved": {
+          "iou": 0.8013554322635017,
+          "symmetric_contour_distance_px": 1.5273625491323204,
+          "different_pixels": 5657,
+          "resolution": 300
+        }
+      },
+      "panda_refined": {
+        "source": {
+          "glyph_id": "glyph_6",
+          "experiment": "per-glyph optimization, not held-out generalization",
+          "input_image": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_6/0.png",
+          "input_image_sha256": "554ed02d5338b9233b00be79068616f211c60910012918fd4da5ca009ba2dfec",
+          "input_global_curves": "/data/CalliRewrite/.local_setup/verification/integration/coarse/rl_input/glyph_6/0.npy",
+          "input_global_curves_sha256": "5fc1aa286afc2e66eb8fead6a00580733121fb1d5177dd785090a7ba6fb348f8",
+          "config": {
+            "actor_lr": 3e-05,
+            "critic_lr": 0.0001,
+            "gamma": 0.9,
+            "tau": 0.005,
+            "independent_critic_backbones": true,
+            "actor_hidden": [
+              128,
+              256
+            ],
+            "critic_hidden": [
+              128,
+              256,
+              256
+            ],
+            "actor_distribution_hidden": [
+              64
+            ],
+            "batch_size": 256,
+            "buffer_size": 32768,
+            "update_per_step": 1,
+            "image_iter": 10,
+            "start_update": 1,
+            "ema_gamma": 0.9,
+            "seed": 42,
+            "requested_steps": 20000,
+            "eval_every": 2000,
+            "warmup_steps": 512,
+            "max_training_seconds": 420.0
+          },
+          "reward": "Unmodified released CalliEnv.calc_reward",
+          "argv": [
+            ".local_setup/verify_integration_rl.py",
+            "--input-dir",
+            ".local_setup/verification/integration/coarse/rl_input/glyph_6",
+            "--glyph-id",
+            "glyph_6",
+            "--output",
+            ".local_setup/verification/integration/rl/glyph_6",
+            "--steps",
+            "20000",
+            "--eval-every",
+            "2000",
+            "--max-training-seconds",
+            "420",
+            "--require-gpu"
+          ],
+          "verification_runner_sha256": "3e9ccc0d2cb766de36952c97d4b9b321df417d135e8d2ec8a78a0721b094017a",
+          "policy_checkpoint": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_6/best_policy.pth",
+          "policy_sha256": "a58de01a8e3b7894ac841337cce1fb43fb7f5c2132f6a77efa6102cedb1044b2",
+          "selected": {
+            "variant": "training_ema",
+            "steps": 18000,
+            "metrics": {
+              "iou": 0.5630773724759922,
+              "chamfer_symmetric_mean_pixels": 2.687629461288452,
+              "chamfer_normalized_by_width": 0.008958764870961507,
+              "xor_pixels": 11966,
+              "native_canvas_width": 300,
+              "target_ink_pixels": 26087,
+              "rendered_ink_pixels": 16721,
+              "metric_note": "Symmetric mean Euclidean contour distance on native 300px masks; not claimed identical to paper Chamfer implementation.",
+              "steps": 648,
+              "reward_sum": -1638.5155214866304,
+              "mean_action_norm": 0.7724394847029521,
+              "stroke_count": 20
+            }
+          },
+          "schema": "callirewrite.native-brush-contact.v1",
+          "source_kind": "refined",
+          "coordinate_order": "u=image column, v=image row",
+          "coordinate_units": "normalized image width",
+          "heading_units": "degrees",
+          "xy_uv_semantics": "Exact native rendered/reward footprint anchor from calc_four_points, paired with SAME returned state's radius/length/heading.",
+          "requested_xy_uv_semantics": "Separate step() action-offset skeleton request; differs from native footprint anchor in official code.",
+          "native_canvas_width": 300,
+          "native_stamp_count": 648,
+          "native_rasterizer_call_count": 1272,
+          "native_raster_convention": "tools.Writing_Brush.draw_canvas: integer center and polygon vertices multiplied by canvas_width; disk radius is normalized current_r passed directly as pixel radius (preserved official artifact).",
+          "native_reconstruction_exact": true,
+          "timing": "No physical timestamps exported; each row is one official environment contact sample.",
+          "stroke_id_semantics": "Contiguous zero-based stroke from original pt_idx and current skeleton index; no bridge across ids.",
+          "ema_during_evaluation": false,
+          "source_hashes": {
+            "rl_finetune/Callienv/envs/Callienv.py": "2495d403a436a648122f29b340dee6b324a4dd3570db3570d7ae9978b8ce2244",
+            "rl_finetune/Callienv/envs/tools.py": "c6ecb61ce0e036a97e9bac96aa8bbb1da7cf6c0f561add47538d699e612d82fe"
+          },
+          "source_file": "/data/CalliRewrite/.local_setup/verification/integration/rl/glyph_6/refined/trajectory.npz",
+          "source_sha256": "d470b80ef31828b8179b725411886e8aa0d73fae696e265939b1b8bd8936431a"
+        },
+        "scope": "kinematic replay; no dynamics or mesh collision validation",
+        "contact_samples": 648,
+        "stroke_groups": 20,
+        "trajectory_samples": 1589,
+        "duration_s": 82.31824849276775,
+        "glyph_side_m": 0.18,
+        "paper_side_m": 0.36,
+        "image_to_base": "X=.55+side*(v-.5), Y=side*(u-.5), Z=.002-compression",
+        "virtual_calibration": "radius_m = 2 * compression_m; illustrative, not physical calibration",
+        "max_position_error_m": 3.0301405935985934e-09,
+        "max_orientation_error_rad": 1.7768882474002526e-08,
+        "minimum_joint_limit_margin_rad": 0.5661564590210655,
+        "max_joint_velocity_ratio": 0.14557550692685664,
+        "minimum_ferrule_clearance_m": 0.041069411711094475,
+        "achieved_contact_samples": 648,
+        "pen_up_ink_samples": 0,
+        "source_to_achieved": {
+          "iou": 1.0,
+          "symmetric_contour_distance_px": 0.0,
+          "different_pixels": 0,
+          "resolution": 300
+        },
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "raster_convention": "native integer triangle plus normalized-radius disk",
+        "native_to_source": {
+          "iou": 1.0,
+          "symmetric_contour_distance_px": 0.0,
+          "different_pixels": 0,
+          "resolution": 300
+        },
+        "checks": {
+          "all_ik_samples_converged": true,
+          "finite_solution": true,
+          "position_error_below_20_um": true,
+          "orientation_error_below_0_01_rad": true,
+          "inside_joint_limits": true,
+          "within_joint_velocity_limits": true,
+          "rigid_ferrule_above_paper": true,
+          "all_expected_contacts_achieved": true,
+          "no_ink_during_pen_up": true,
+          "nonempty_drawing": true,
+          "source_achieved_iou_at_least_0_98": true,
+          "export_matches_official_native_raster": true
+        },
+        "status": "passed",
+        "target_to_source": {
+          "iou": 0.5640762839049746,
+          "symmetric_contour_distance_px": 2.745402142637321,
+          "different_pixels": 11909,
+          "resolution": 300
+        },
+        "target_to_achieved": {
+          "iou": 0.5640762839049746,
+          "symmetric_contour_distance_px": 2.745402142637321,
+          "different_pixels": 11909,
+          "resolution": 300
+        }
+      }
+    }
+  },
+  "browser": {
+    "refined_glyph6_completed": true,
+    "live_canvas_matches_offline": true,
+    "paper_frame": "image right +Y_base, image down +X_base; image plane faces +Z",
+    "nominal_playback_duration_s": 82.31824849276775
+  },
+  "interpolation": {
+    "status": "passed",
+    "results": [
+      {
+        "trajectory_file": "/data/CalliRewrite/.local_setup/verification/integration/panda_coarse/panda_trajectory.npz",
+        "trajectory_sha256": "ca12d21328f5cfaa447ee6a7a8f66ba55cb2c7060720b0720b65131bea342a65",
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "scope": "sampled kinematic interpolation; no continuous collision proof or dynamics validation",
+        "ink_semantics": "ink only at exported contact samples; intermediate animation adds no stamps",
+        "fractions_per_segment": [
+          0.25,
+          0.5,
+          0.75
+        ],
+        "segments": 2083,
+        "interior_samples": 6249,
+        "max_tip_deviation_from_linear_cartesian_segment_m": 7.893602789803438e-06,
+        "max_tip_deviation_segment": 1105,
+        "max_orientation_error_rad": 1.4899742517925075e-06,
+        "max_orientation_error_segment": 1105,
+        "minimum_ferrule_clearance_m": 0.040000231417596385,
+        "minimum_joint_limit_margin_rad": 0.5799584151411454,
+        "max_joint_velocity_ratio": 0.1550240662897361,
+        "approach_samples_in_geometric_contact": 31,
+        "acceptance_limits": {
+          "tip_deviation_m": 0.0001,
+          "orientation_error_rad": 0.01
+        },
+        "checks": {
+          "interior_tip_deviation_within_limit": true,
+          "interior_orientation_within_limit": true,
+          "interior_ferrule_above_paper": true,
+          "interior_joints_inside_limits": true,
+          "linear_joint_velocity_within_limits": true,
+          "same_urdf_as_replay": true
+        },
+        "status": "passed"
+      },
+      {
+        "trajectory_file": "/data/CalliRewrite/.local_setup/verification/integration/panda_coarse_glyph6/panda_trajectory.npz",
+        "trajectory_sha256": "2d4a1d7f64d358622fae2ec75d827491db114698d35ecfe4e446482b13005560",
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "scope": "sampled kinematic interpolation; no continuous collision proof or dynamics validation",
+        "ink_semantics": "ink only at exported contact samples; intermediate animation adds no stamps",
+        "fractions_per_segment": [
+          0.25,
+          0.5,
+          0.75
+        ],
+        "segments": 3109,
+        "interior_samples": 9327,
+        "max_tip_deviation_from_linear_cartesian_segment_m": 5.274400892158142e-06,
+        "max_tip_deviation_segment": 1441,
+        "max_orientation_error_rad": 1.4953593302018354e-06,
+        "max_orientation_error_segment": 1441,
+        "minimum_ferrule_clearance_m": 0.041001240229900274,
+        "minimum_joint_limit_margin_rad": 0.572213824333311,
+        "max_joint_velocity_ratio": 0.1475941804179264,
+        "approach_samples_in_geometric_contact": 50,
+        "acceptance_limits": {
+          "tip_deviation_m": 0.0001,
+          "orientation_error_rad": 0.01
+        },
+        "checks": {
+          "interior_tip_deviation_within_limit": true,
+          "interior_orientation_within_limit": true,
+          "interior_ferrule_above_paper": true,
+          "interior_joints_inside_limits": true,
+          "linear_joint_velocity_within_limits": true,
+          "same_urdf_as_replay": true
+        },
+        "status": "passed"
+      },
+      {
+        "trajectory_file": "/data/CalliRewrite/.local_setup/verification/integration/panda_refined_glyph0/panda_trajectory.npz",
+        "trajectory_sha256": "c1e2b1f06b87549f9cd386fd75e09d25c1c3de4d3239ba88e9107e0e6e92bbd9",
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "scope": "sampled kinematic interpolation; no continuous collision proof or dynamics validation",
+        "ink_semantics": "ink only at exported contact samples; intermediate animation adds no stamps",
+        "fractions_per_segment": [
+          0.25,
+          0.5,
+          0.75
+        ],
+        "segments": 914,
+        "interior_samples": 2742,
+        "max_tip_deviation_from_linear_cartesian_segment_m": 7.2628548165737775e-06,
+        "max_tip_deviation_segment": 38,
+        "max_orientation_error_rad": 3.1751820931909007e-06,
+        "max_orientation_error_segment": 588,
+        "minimum_ferrule_clearance_m": 0.041054918723706264,
+        "minimum_joint_limit_margin_rad": 0.5775179957986731,
+        "max_joint_velocity_ratio": 0.15467627918832105,
+        "approach_samples_in_geometric_contact": 19,
+        "acceptance_limits": {
+          "tip_deviation_m": 0.0001,
+          "orientation_error_rad": 0.01
+        },
+        "checks": {
+          "interior_tip_deviation_within_limit": true,
+          "interior_orientation_within_limit": true,
+          "interior_ferrule_above_paper": true,
+          "interior_joints_inside_limits": true,
+          "linear_joint_velocity_within_limits": true,
+          "same_urdf_as_replay": true
+        },
+        "status": "passed"
+      },
+      {
+        "trajectory_file": "/data/CalliRewrite/.local_setup/verification/integration/panda_refined_glyph6/panda_trajectory.npz",
+        "trajectory_sha256": "695c0ea367aeaaafc6f601f90150c66d1c27d53b469f2800c3a9b70cda6989b0",
+        "urdf_sha256": "63792d2679f22c4e41cda2c4d9d903644e628970ad0656b9eec8485113941555",
+        "scope": "sampled kinematic interpolation; no continuous collision proof or dynamics validation",
+        "ink_semantics": "ink only at exported contact samples; intermediate animation adds no stamps",
+        "fractions_per_segment": [
+          0.25,
+          0.5,
+          0.75
+        ],
+        "segments": 1588,
+        "interior_samples": 4764,
+        "max_tip_deviation_from_linear_cartesian_segment_m": 9.265899162531341e-06,
+        "max_tip_deviation_segment": 970,
+        "max_orientation_error_rad": 3.2513313281660297e-06,
+        "max_orientation_error_segment": 562,
+        "minimum_ferrule_clearance_m": 0.04115636001831497,
+        "minimum_joint_limit_margin_rad": 0.5661606754351527,
+        "max_joint_velocity_ratio": 0.14557550692685664,
+        "approach_samples_in_geometric_contact": 36,
+        "acceptance_limits": {
+          "tip_deviation_m": 0.0001,
+          "orientation_error_rad": 0.01
+        },
+        "checks": {
+          "interior_tip_deviation_within_limit": true,
+          "interior_orientation_within_limit": true,
+          "interior_ferrule_above_paper": true,
+          "interior_joints_inside_limits": true,
+          "linear_joint_velocity_within_limits": true,
+          "same_urdf_as_replay": true
+        },
+        "status": "passed"
+      }
+    ]
+  },
+  "code_sha256": {
+    "deformable_brush_physics.py": "ab4baf8a9946f24c63fb1c495bc7b44a4e60aa782b9f8f6d412f34fb8886f1b8",
+    "callirewrite_replay.py": "0d3689ea7d6a142d78a498b354fc96d1f9a2bd25f6edf6e1794d9b27c5bebdfe",
+    "plot_callirewrite_rl.py": "3d62726caed760cb947ee9bd20c6744997c07a9f0aaf32f385e0ba1e4c981903",
+    "verify_replay_interpolation.py": "28976459cd8113287ce9468113241113a82bec859335e5c245d86db8118b0725",
+    "verify_callirewrite_extraction.py": "dcfb446ac62156ee7376a15319dfa536727e50d84bb8c46fc1db84fc71df0390",
+    "ablate_callirewrite_rl.py": "fcc103afb2acce6319f832c95cd972bbc0b053f1d69174e12724c2f6ef2368ff",
+    "verify_callirewrite_rl.py": "3e9ccc0d2cb766de36952c97d4b9b321df417d135e8d2ec8a78a0721b094017a",
+    "build_verification_report.py": "9fce4f7185f4a60920dd8b5b334ede32131aa1a614a7b01b62a6b326def9f7b3",
+    "panda_replay_kinematics.py": "aa2fb82cd753ac65178dfa60c31554e4a77047f9ff6bcc1a29b47a4cc9640626",
+    "callirewrite_io.py": "bdb170e49e8866d7bd25e2fcef6c321dca26fd9e7dd57b566b2c1cd222b26001",
+    "calligraphy_panda_viser_sim.py": "1955ee295e71ef1567a8d28178336c2407d22b54f63b26ff673b24b65ca1162b"
+  }
+}

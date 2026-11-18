@@ -1,10 +1,165 @@
 # Panda calligraphy viewer
 
-This folder is a custom 3D add-on: a Franka Panda arm, a deformable brush mesh and an ink canvas displayed in a browser with Viser. It runs independently of the official CalliRewrite code. The official tool-aware simulation lives in [`../rl_finetune/`](../rl_finetune/); this viewer uses its own kinematics and hand-written trajectories.
+This folder connects CalliRewrite outputs to a Franka Panda arm, a deformable brush mesh and an ink canvas in Viser. The new [`callirewrite_replay.py`](callirewrite_replay.py) accepts saved pretrained extraction results or exported SAC rollouts. The original [`calligraphy_panda_viser_sim.py`](calligraphy_panda_viser_sim.py) remains available for the hand-written `yi` and `yong` demonstrations below.
 
-**This viewer does not load the pretrained extraction checkpoints or a trained SAC policy.** Its implemented characters are `yong` (永, eight stroke groups) and `yi` (一, one stroke group). The source header also mentions 福 and 中, but they are not present in the trajectory dictionary.
+The neural models run in the separate extraction and RL environments; Viser loads their saved outputs. The official tool-aware environment is in [`../rl_finetune/`](../rl_finetune/). Its source and the original viewer were not modified for this integration.
 
-## Launch with the existing environment
+## Verified CalliRewrite replay
+
+**Verified on 2026-11-17:** fresh pretrained inference, bounded SAC optimization, export and Panda inverse kinematics worked for two input characters. All four coarse/refined paths passed offline replay checks; the refined image-6 example also completed live browser playback. This establishes computational integration feasibility. It does not establish full paper reproduction, generalization, physical brush fidelity or safe hardware execution.
+
+Launch the bundled refined example with the existing environment:
+
+```bash
+cd /data/CalliRewrite
+env -u PYTHONPATH -u PYTHONHOME PYTHONNOUSERSITE=1 \
+  panda_calligraphy/venv/bin/python panda_calligraphy/callirewrite_replay.py \
+  --input panda_calligraphy/docs/callirewrite_demo_refined.npz \
+  --target panda_calligraphy/docs/callirewrite_demo_input.png \
+  --output .local_setup/verification/integration/demo_replay \
+  --serve --port 8080
+```
+
+Open the printed localhost URL and press **Play**. The example has 20 stroke groups and takes about 82 seconds at nominal speed. **Playback speed** accelerates the display; **Replay** repeats a finished run and **Restart and clear** resets it. The comparison panel shows the input, source reconstruction and accumulated Panda drawing. Stop the server with Ctrl+C.
+
+### Interactive ink and brush controls
+
+**Replay mode → Native faithful** is the default. Its ink mask uses the exact recorded footprints and preserves the released raster convention. The ink styling controls are disabled. **Ink studio** enables an artistic preview using pixel-scaled round footprints together with the exported triangles, plus adjustable opacity, color, width and a soft bleed halo. It is separate from the verified model output. Neither mode changes the saved trajectory, pose solutions, virtual compression or source contact timing.
+
+Ink settings redraw all currently accumulated contacts immediately, including while paused or after completion. This makes comparisons at the same pose reproducible. The guide grid and fiber display are scene overlays; they are not added to the saved ink image. All settings folders can be collapsed, and the **Replay mode** selector stays outside them.
+
+| Control | Behavior |
+| --- | --- |
+| **Ink opacity** / **Ink level (%)** | Multiply the displayed ink strength. Ink level is a uniform preview setting, not a reservoir simulation. |
+| **Dip ink (100%)** | Restores ink level to 100% and redraws accumulated ink with the current opacity. |
+| **Ink color** | Selects the preview RGB color and the displayed tuft color. |
+| **Footprint scale** | Scales each round footprint and triangle about its recorded anchor; the robot path stays fixed. |
+| **Paper absorbency / bleed** | Adds a Gaussian halo, with a 0–3 pixel blur scale at 300-pixel resolution. This illustrates spreading without a fluid solver. |
+| **Bristle stiffness (visual)** | Changes the cubic-spine bend by an inverse gain: larger values bend less. It does not estimate force. |
+| **Tuft splay (visual)** | Expands the displayed contact ellipse. It does not change ink width; use Footprint scale for that. |
+| **Guide grid** / **Show fibers** / **Show arm** | Toggle scene elements for inspection; hiding the arm leaves the brush visible. |
+| **Scene overview** / **Paper view** / **Brush view** | Apply repeatable overview, top-down and side-view cameras. |
+| **Play one stroke** | Plays the remaining portion of the current stroke, or the next stroke, and pauses at its final contact. It does not skip the preceding lifted travel. |
+| **Loop playback** | Repeats after completion and clears the displayed ink before each new run. |
+| **Clear paper** | Clears ink at the current pose; only subsequent contacts draw. Earlier contacts stay excluded when settings change. |
+| **Restore defaults** | Restores faithful mode and all default display settings while keeping playback progress and the current clear-paper boundary. |
+| **Save preview and settings** | Writes a PNG and matching JSON under the selected output folder's `preview/` subfolder. |
+
+A completed run also saves `preview/last_completed.png` and its settings JSON. Only a complete Native faithful run without a mid-run clear updates `viser_completed.png`; custom previews never replace `panda_achieved.png`, `panda_trajectory.npz` or `verification.json`. Starting the command itself still reruns verification in the requested output folder, so choose a new `--output` to retain previous evidence.
+
+The display loop owns playback and settings state; UI callbacks queue commands. Preview controls operate on the fixed exported trajectory rather than issuing manual robot motion. Tests cover native pixel equality, width/bleed/color changes, clearing without rewind, one-stroke playback, immutable motion arrays and separate preview settings export:
+
+```bash
+PYTHONPATH=panda_calligraphy panda_calligraphy/venv/bin/python \
+  -m unittest test_replay_studio -v
+```
+
+Use `--input panda_calligraphy/docs/callirewrite_demo_coarse.npz` to replay the pretrained coarse result. Omit `--serve` for verification and image export without a browser. These saved examples need no CUDA or neural checkpoints for playback. Existing files in `--output` are replaced, so use a new folder when retaining comparisons.
+
+Actual completed refined replay in Viser:
+
+![Actual Panda replay of the exported CalliRewrite result, with input and reconstruction controls](docs/callirewrite_refined_viser.jpg)
+
+### Measured results and limitations
+
+![Two actual inputs, official coarse outputs, native brush baselines, trained outputs and Panda reconstructions](docs/callirewrite_verification_comparison.png)
+
+The quality metric below is foreground intersection-over-union (IoU) against the input at the native brush canvas resolution of 300 × 300. Higher is better. All four conditions use the same released brush renderer. EMA means the exponential moving average update of the skeleton during training.
+
+| Condition | Dataset image 0 | Dataset image 6 |
+| --- | ---: | ---: |
+| Fresh coarse skeleton, zero action | 61.48% | 53.37% |
+| Training EMA skeleton, zero action | 63.29% | 55.88% |
+| Fresh coarse skeleton, trained policy | 60.78% | 53.25% |
+| Training EMA skeleton + trained policy | 62.62% | 56.31% |
+| Collected training steps | 50,000 | 20,000 |
+| Selected checkpoint step | 30,000 | 18,000 |
+| Exported contact samples / stroke groups | 400 / 10 | 648 / 20 |
+
+Combined refinement improves native overlap by **1.14 and 2.94 percentage points**, but the policy alone on fresh coarse geometry slightly worsens both results. Most improvement comes from skeleton updates; the policy's effect on the EMA skeleton is mixed. Training and checkpoint selection used the same glyph, with seed 42. This is a small optimization pilot, with no held-out result or convergence claim. The supplied train/test pairs also overlap, so they cannot establish generalization without constructing a separate evaluation set.
+
+The jagged triangles visible above come from the released `Writing_Brush.draw_canvas`: polygon positions are scaled into pixels, while the normalized disk radius is passed directly to the pixel rasterizer. This apparent unit inconsistency is preserved for source-faithful verification. The smoother coarse column uses a different renderer and is **not** the baseline for the reported refinement gains. Changing the training renderer requires a separate controlled experiment and retraining. Ink studio changes only the viewer's preview and does not revise these measurements.
+
+Verification evidence:
+
+- **Pretrained extraction:** restored and checked the cached phase-2 and perceptual weights; fresh GPU inference took about 2.35 and 2.42 seconds including rendering. Independent exact reconstruction matched the official thresholded foreground with IoU 1.0 for both. The sampled XY/radius approximation used for coarse robot motion has 0.9586 and 0.9532 IoU against that exact raster.
+- **RL export:** reloaded both selected checkpoints into fresh policies and reproduced their metrics. Exported sample footprints reconstruct the native environment mask exactly; stroke groups and sample indices are preserved.
+- **Panda replay:** coarse and refined paths for both glyphs passed pose, joint-limit, nominal joint-speed, ferrule-clearance and stamp-scheduling checks. Source-to-achieved ink masks have IoU 1.0 at 300 pixels. For the refined examples, this also equals the exported native mask exactly. This measures replay fidelity, not similarity to the target glyph.
+- **Between waypoints:** 23,082 interior joint-interpolation samples across four trajectories passed; the largest tip deviation from a straight Cartesian segment was 9.27 micrometres. This sampled check is not continuous collision validation.
+- **Live browser:** the refined image-6 playback completed and its saved canvas matched the offline Panda raster pixel-for-pixel. Panda tests: 29 passed, two optional native-renderer tests skipped; all 21 replay tests passed in the RL environment, including those native comparisons.
+
+The [verification record](docs/callirewrite_verification.json) contains metrics, configurations, provenance and hashes. Separate [image-0](docs/callirewrite_rl_glyph_0.png) and [image-6](docs/callirewrite_rl_glyph_6.png) figures show the ablations.
+
+### How the integration works
+
+```text
+input glyph → official pretrained extraction → decoded quadratic strokes
+            → official brush environment + bounded SAC/EMA optimization
+            → saved contact samples, radii, headings and native footprints
+            → paper-to-Panda mapping → tool-down pose IK + lifted travel
+            → achieved forward-kinematic positions → ink raster → Viser
+```
+
+The decoder handles every extraction round, moving crop/window coordinates and pen-up commands. Extraction curves are **quadratic Bézier curves**; the illustrative deforming tuft uses a separate **cubic Bézier spine**. Width is decoded from the source renderer's radius convention, not interpreted as a measured pressure.
+
+For normalized image column `u`, row `v`, and default glyph side `L = 0.18 m`, the new replay maps into the Panda base frame as:
+
+```text
+X = 0.55 + L × (v − 0.5)
+Y =        L × (u − 0.5)
+Z_nominal = 0.002 − compression
+radius_m = 2 × compression
+```
+
+Thus image-right is **+Y_base**, image-up is **−X_base**, and the paper faces **+Z_base**. This prevents reflection when viewing the top surface. It supersedes the earlier proposed mapping for imported glyphs; the legacy `yi` overview farther below retains its separately labelled historical canvas convention.
+
+The paper is 0.36 m square. A virtual radius-to-compression rule sets nominal brush height, with a maximum accepted compression of 12 mm. A 25 mm lift separates stroke groups. The solver uses the Panda URDF's complete transforms, including the fixed hand rotation, and holds the tool upright. Exported headings rotate the footprint and illustrative tuft; they do not command wrist rotation. Timing is generated from a default 25 mm/s writing speed and stretched where necessary to satisfy URDF joint-speed limits. Display speed above 1× is only a viewing acceleration.
+
+The cubic spine and surrounding mesh illustrate contact and splay. The new replay uses an illustrative geometry model tailored to exported radii, rather than the legacy force estimate. Ink uses source sample footprints at achieved robot positions. Joint interpolation animates motion smoothly; it adds no ink stamps. Approach/lift can pass through geometric contact, but ink is gated to the exported drawing samples. There is no bristle mass solver, ink-fluid simulation, calibrated force model, robot dynamics, acceleration check or complete robot/table collision test.
+
+### Reproduce extraction and optimization
+
+The local environments and cached assets are already installed. The following uses a new run name to preserve the recorded evidence; change it on later runs. The extraction verifier checks archive hashes and restores missing files without downloading new weights.
+
+```bash
+cd /data/CalliRewrite
+source .local_setup/activate.sh coarse
+python panda_calligraphy/verify_callirewrite_extraction.py \
+  --input rl_finetune/data/test_data/6.png --name repeat_glyph_6 --require-gpu
+
+source .local_setup/activate.sh rl
+python panda_calligraphy/verify_callirewrite_rl.py \
+  --input-dir .local_setup/verification/integration/coarse/rl_input/repeat_glyph_6 \
+  --glyph-id repeat_glyph_6 \
+  --output .local_setup/verification/integration/rl/repeat_glyph_6 \
+  --steps 20000 --eval-every 2000 --max-training-seconds 420 --require-gpu
+python panda_calligraphy/ablate_callirewrite_rl.py \
+  --run-dir .local_setup/verification/integration/rl/repeat_glyph_6 --require-gpu
+python panda_calligraphy/plot_callirewrite_rl.py \
+  .local_setup/verification/integration/rl/repeat_glyph_6
+```
+
+Pass the resulting `refined/trajectory.npz` to the replay command above. For the image-0 experiment use `test_data/0.png`, a distinct run name, `--steps 50000` and `--max-training-seconds 600`. Time limits can stop a run before its requested step count; inspect `report.json`.
+
+The verification runner reuses the released environment, reward and brush raster. It builds two independent SAC critic backbones, whereas the released training entry point shares a backbone; batch size 256 and replay capacity 32,768 also differ from the official defaults. These deliberate pilot settings are recorded in each report. This is not an unchanged execution of the full paper training configuration.
+
+Raw runs are retained under `.local_setup/verification/integration/`: `coarse/runs/`, `rl/glyph_0_extended/`, `rl/glyph_6/` and the four `panda_*` result folders. Selected locally trained policies are `best_policy.pth`, paired with `best_skeleton_rc.npy`. For checkpoint-only evaluation, use the RL verifier's `--evaluate-checkpoint` and `--evaluate-skeleton` options with a new output directory. Neural checkpoint loading belongs in the RL environment, not the viewer.
+
+Replay outputs include `verification.json`, `panda_trajectory.npz`, `source_reconstruction.png`, `panda_achieved.png` and `comparison.png`; completed live playback adds `viser_completed.png`. `--help` lists supported replay arguments. Focused tests can be repeated with:
+
+```bash
+env -u PYTHONPATH -u PYTHONHOME PYTHONNOUSERSITE=1 \
+  panda_calligraphy/venv/bin/python -m unittest discover \
+  -s panda_calligraphy -p 'test_*.py'
+```
+
+No new dependencies or hardware were needed for this pilot. It used the existing RTX 3090 Ti, TensorFlow extraction environment, PyTorch RL environment and Python 3.10 viewer environment. A broader method evaluation needs distinct held-out glyphs, repeated seeds, longer training and an explicit decision about the native radius inconsistency. A physical Panda experiment would additionally need a calibrated brush/tool transform, contact model and robot safety/controller integration.
+
+## Original scripted `yi` / `yong` scene
+
+The following sections describe the original viewer only. It does not load extraction checkpoints or an SAC policy. Its implemented characters are `yong` (永, eight stroke groups) and `yi` (一, one stroke group). The source header also mentions 福 and 中, but they are not present in the trajectory dictionary.
+
+### Launch with the existing environment
 
 Run these commands in a terminal on the computer hosting the repository:
 
@@ -121,7 +276,7 @@ cd /path/to/CalliRewrite/panda_calligraphy
 python3.10 -m venv venv
 env -u PYTHONPATH -u PYTHONHOME PYTHONNOUSERSITE=1 \
   ./venv/bin/python -m pip install \
-  'numpy==2.2.6' 'Pillow==12.3.0' 'viser==1.1.1' \
+  'numpy==2.2.6' 'scipy==1.15.3' 'Pillow==12.3.0' 'viser==1.1.1' \
   'robot_descriptions==3.3.0' 'yourdfpy==0.0.60'
 ```
 
@@ -133,6 +288,14 @@ If the terminal warns that it could not load robot meshes, the brush/paper scene
 
 | File | Purpose |
 | --- | --- |
+| [`callirewrite_replay.py`](callirewrite_replay.py) | Saved-output adapter, verification, faithful ink raster and interactive Panda playback. |
+| [`callirewrite_io.py`](callirewrite_io.py) | Decode official extraction rounds, crop coordinates, pen states and widths. |
+| [`panda_replay_kinematics.py`](panda_replay_kinematics.py) | URDF-based pose IK and forward kinematics for imported outputs. |
+| [`verify_callirewrite_extraction.py`](verify_callirewrite_extraction.py) | Check cached weights, run pretrained inference and validate decoding. |
+| [`verify_callirewrite_rl.py`](verify_callirewrite_rl.py) | Bounded SAC training, checkpoint evaluation and native trajectory export. |
+| [`ablate_callirewrite_rl.py`](ablate_callirewrite_rl.py), [`plot_callirewrite_rl.py`](plot_callirewrite_rl.py) | Separate policy/skeleton effects and plot recorded results. |
+| [`verify_replay_interpolation.py`](verify_replay_interpolation.py) | Check sampled motion between saved joint waypoints. |
+| [`build_verification_report.py`](build_verification_report.py) | Collect completed run evidence and bundled replay examples for this README. |
 | [`calligraphy_panda_viser_sim.py`](calligraphy_panda_viser_sim.py) | Server, Panda kinematics, built-in paths, canvas and browser controls. |
 | [`deformable_brush_physics.py`](deformable_brush_physics.py) | Contact-dependent tuft mesh, bristle segments, force estimate and footprint. |
 | [`docs/`](docs/README.md) | Live Viser recording, `yi` stage sequence, brush diagram, provenance and media generators. |
