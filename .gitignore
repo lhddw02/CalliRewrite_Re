@@ -1,3 +1,34 @@
+<<<<<<< HEAD
 /seq_extract/outputs/
 __pycache__/
 *.py[cod]
+=======
+# seq_extract: generated outputs, venv, and test inputs (not source code)
+seq_extract/outputs/
+seq_extract/.venv/
+seq_extract/sample_inputs/
+seq_extract/tools/*.npz
+seq_extract/tools/*.png
+seq_extract/tools/*.gif
+seq_extract/tools/*_sum/
+seq_extract/1a2b3c.png
+
+# rl_finetune venv and generated data
+rl_finetune/.venv/
+rl_finetune/data/
+
+# panda_calligraphy legacy venv
+panda_calligraphy/venv/
+
+# RoboFab: KanjiVG data file is large (~30MB), download via robofab_sim/data/download_kanjivg.sh
+robofab_sim/data/kanjivg.xml
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS / editor
+.DS_Store
+*.swp
+>>>>>>> 768d1d17eb628f88d97b24ebbe83305a891555cf
