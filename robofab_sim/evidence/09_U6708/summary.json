@@ -1,0 +1,22 @@
+{
+  "char": "月",
+  "codepoint": "U+6708",
+  "xml_id": "kvg:kanji_06708",
+  "strokes": 4,
+  "samples": 1776,
+  "contact_samples": 574,
+  "max_ik_error_m": 1.1397825531820083e-06,
+  "max_tool_axis_error": 4.522379049756385e-06,
+  "travel_contact_samples": 0,
+  "force_range_n": [
+    0.08495951926440266,
+    1.3570909037746575
+  ],
+  "radius_range_m": [
+    0.00354669167568669,
+    0.0070914537898481705
+  ],
+  "ink_pixels": 56807,
+  "canvas_sha256": "d60c36aef360264236826d0bda84a50aa94461183fb51267c987762207f60f74",
+  "trace_sha256": "5b22d5e7b3f12499dd92c2e2b54694b1cb08f553832c5bf11ee613ed8b6093cd"
+}

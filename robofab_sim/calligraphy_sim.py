@@ -5,13 +5,13 @@ Franka Panda arm + deformable brush + Xuan paper in Viser.
 
 Stage 1 (60 pts) — manual waypoints, writes one character.
 Stage 2 (80 pts) — pressure-modulated strokes, multiple characters.
-Stage 3 (100 pts) — automatic trajectory from KanjiVG for any CJK character.
+Stage 3 (100 pts) — automatic trajectory for characters present in KanjiVG.
 
 Usage:
     # Stage 1/2: choose from built-in characters (yong / yi / ren / zhong / shan)
     python calligraphy_sim.py
 
-    # Stage 3: pass any Chinese character directly
+    # Stage 3: pass a character available in the KanjiVG dataset
     python calligraphy_sim.py --char 福
     python calligraphy_sim.py --char 水
 
@@ -234,6 +234,9 @@ class PandaKinematics:
             ])
             T = T @ T_i
 
+        # panda_hand_joint: fixed local-Z rotation in the official URDF.
+        c, s = np.cos(-np.pi / 4), np.sin(-np.pi / 4)
+        T[:3, :3] = T[:3, :3] @ np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
         hand_pos = T[:3, 3]
         hand_rot = T[:3, :3]
         tool_dir = hand_rot[:, 2]  # Hand Z axis (points forward between gripper fingers)
@@ -242,39 +245,35 @@ class PandaKinematics:
 
     def compute_jacobian(self, q: np.ndarray) -> np.ndarray:
         eps = 1e-5
-        J = np.zeros((3, 7))
-        _, _, p0 = self.forward_kinematics(q)
+        J = np.zeros((6, 7))
+        _, r0, p0 = self.forward_kinematics(q)
 
         for i in range(7):
             q_plus = q.copy()
             q_plus[i] += eps
-            _, _, p_plus = self.forward_kinematics(q_plus)
-            J[:, i] = (p_plus - p0) / eps
+            _, r_plus, p_plus = self.forward_kinematics(q_plus)
+            J[:3, i] = (p_plus - p0) / eps
+            J[3:, i] = 0.12 * (r_plus[:, 2] - r0[:, 2]) / eps
 
         return J
 
-    def solve_ik(self, target_tip_pos: np.ndarray, current_q: np.ndarray, max_iters=25, tol=1e-4) -> np.ndarray:
+    def solve_ik(self, target_tip_pos: np.ndarray, current_q: np.ndarray, max_iters=80, tol=5e-5) -> np.ndarray:
         """
-        DLS Inverse Kinematics targeting the nominal brush tip coordinate.
+        DLS IK targeting the tip position and a downward tool axis (free yaw).
         """
         q = current_q.copy()
-        lambda_damp = 0.04
-        k_null = 0.15
+        lambda_damp = 0.003
 
         for _ in range(max_iters):
-            _, _, curr_tip = self.forward_kinematics(q)
-            err = target_tip_pos - curr_tip
+            _, rot, curr_tip = self.forward_kinematics(q)
+            err = np.concatenate((target_tip_pos - curr_tip,
+                                  0.12 * (np.array([0., 0., -1.]) - rot[:, 2])))
             if np.linalg.norm(err) < tol:
                 break
 
             J = self.compute_jacobian(q)
-            JJT = J @ J.T + (lambda_damp ** 2) * np.eye(3)
-            J_dls = J.T @ np.linalg.inv(JJT)
-
-            null_proj = np.eye(7) - J_dls @ J
-            delta_q_null = null_proj @ (k_null * (self.NOMINAL_REST_Q - q))
-
-            delta_q = J_dls @ err + delta_q_null
+            JJT = J @ J.T + (lambda_damp ** 2) * np.eye(6)
+            delta_q = J.T @ np.linalg.solve(JJT, err)
             max_step = 0.20
             step_norm = np.linalg.norm(delta_q)
             if step_norm > max_step:
@@ -303,19 +302,30 @@ class XuanPaperCanvas:
         self.pw = physical_width
         self.ph = physical_height
         self.ox, self.oy = origin_xy
-        self.image = Image.new("RGBA", (self.res, self.res), (251, 247, 238, 255))
+        self.image = Image.new("RGB", (self.res, self.res), (251, 247, 238))
         self.draw = ImageDraw.Draw(self.image)
         self.draw_grid()
+        self.background = np.array(self.image)
+        self.coverage = np.zeros((self.res, self.res), dtype=np.uint8)
 
     def draw_grid(self):
         pad = int(self.res * 0.06)
         w, h = self.res, self.res
-        grid_color = (194, 53, 49, 75)
+        grid_color = (234, 190, 182)
         self.draw.rectangle([pad, pad, w - pad, h - pad], outline=grid_color, width=3)
         self.draw.line([(w // 2, pad), (w // 2, h - pad)], fill=grid_color, width=2)
         self.draw.line([(pad, h // 2), (w - pad, h // 2)], fill=grid_color, width=2)
         self.draw.line([(pad, pad), (w - pad, h - pad)], fill=grid_color, width=1)
         self.draw.line([(w - pad, pad), (pad, h - pad)], fill=grid_color, width=1)
+
+    def world_to_pixel(self, world_x: float, world_y: float) -> tuple[int, int] | None:
+        # three.js PlaneGeometry maps texture U=0 to local +X/2 (right), U=1 to -X/2 (left),
+        # so image col increases toward world -X. Invert rx to correct.
+        rx = 1.0 - (world_x - (self.ox - self.pw / 2.0)) / self.pw
+        ry = 1.0 - (world_y - (self.oy - self.ph / 2.0)) / self.ph
+        if not (0 <= rx < 1 and 0 <= ry < 1):
+            return None
+        return int(rx * self.res), int(ry * self.res)
 
     def deposit_ink(self, world_x: float, world_y: float, radius: float, normal_force: float, bleed_factor=0.7):
         """
@@ -323,25 +333,30 @@ class XuanPaperCanvas:
         - world_x (forward/back) -> maps monotonically along the forward axis.
         - world_y (left/right)   -> maps monotonically along the lateral axis (Left -> Right).
         """
-        rx = (world_x - (self.ox - self.pw / 2.0)) / self.pw
-        # Fixed lateral mapping: as world_y moves from -Y to +Y (left to right), ry increases from 0 to 1!
-        ry = (world_y - (self.oy - self.ph / 2.0)) / self.ph
-
-        px = int(np.clip(rx * self.res, 0, self.res - 1))
-        py = int(np.clip(ry * self.res, 0, self.res - 1))
+        pixel = self.world_to_pixel(world_x, world_y)
+        if pixel is None or radius <= 0 or normal_force <= 0:
+            return
+        px, py = pixel
         pr = max(2, int((radius / self.pw) * self.res))
-
-        if 0 <= px < self.res and 0 <= py < self.res:
-            alpha = min(240, int(140 + normal_force * 35))
-            self.draw.ellipse([px - pr, py - pr, px + pr, py + pr], fill=(16, 16, 16, alpha))
-            if bleed_factor > 0.1:
-                p_bleed = int(pr * (1.0 + bleed_factor * 0.35))
-                self.draw.ellipse([px - p_bleed, py - p_bleed, px + p_bleed, py + p_bleed], outline=(30, 25, 20, 30), width=1)
+        # Maximum local optical coverage, rather than frame-count accumulation:
+        # stationary pauses and different GUI frame rates cannot saturate the ink.
+        alpha = int(np.clip(80 + normal_force * 60, 0, 240))
+        pad = int(pr * (1 + max(0, bleed_factor) * .35)) + 2
+        x0, y0 = max(0, px-pad), max(0, py-pad)
+        x1, y1 = min(self.res, px+pad+1), min(self.res, py+pad+1)
+        mask = Image.new("L", (x1-x0, y1-y0))
+        draw = ImageDraw.Draw(mask)
+        cx, cy = px-x0, py-y0
+        draw.ellipse((cx-pad+1, cy-pad+1, cx+pad-1, cy+pad-1), fill=int(alpha*.15))
+        draw.ellipse((cx-pr, cy-pr, cx+pr, cy+pr), fill=alpha)
+        region = self.coverage[y0:y1, x0:x1]
+        np.maximum(region, np.array(mask), out=region)
+        a = region[..., None].astype(float) / 255
+        rgb = (self.background[y0:y1, x0:x1] * (1-a) + 16*a).astype(np.uint8)
+        self.image.paste(Image.fromarray(rgb), (x0, y0))
 
     def clear(self):
-        self.image = Image.new("RGBA", (self.res, self.res), (251, 247, 238, 255))
-        self.draw = ImageDraw.Draw(self.image)
-        self.draw_grid()
+        self.__init__(self.res, self.pw, self.ph, (self.ox, self.oy))
 
 
 # ==============================================================================
@@ -435,7 +450,11 @@ CALLIGRAPHY_TRAJECTORIES = {
 # ==============================================================================
 # 4. Main Viser Simulation Studio
 # ==============================================================================
-def main(extra_char: str | None = None, npz_path: str | None = None):
+def main(extra_char: str | None = None, npz_path: str | None = None, port=8080, demo="", record_dir=None):
+    from execution import Execution
+    from capture import BrowserCapture
+    if record_dir and not demo:
+        raise ValueError("--record-dir requires --demo")
     # Stage 3 (CalliRewrite): load trajectory from seq_extract .npz output
     if npz_path:
         try:
@@ -445,73 +464,72 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
             print(f"[seq_extract] Loaded '{key}' → {len(traj)} strokes")
             extra_char = key
         except Exception as e:
-            print(f"[seq_extract] Failed to load '{npz_path}': {e}")
-            npz_path = None
+            raise ValueError("Experimental NPZ loading failed") from e
 
     # Stage 2: load built-in CJK chars (人/中/山) from KanjiVG so all 5 chars have full trajectories
-    _STAGE2_CHARS = [("人", "ren"), ("中", "zhong"), ("山", "shan")]
+    _STAGE2_CHARS = [("永", "yong"), ("一", "yi"), ("人", "ren"), ("中", "zhong"), ("山", "shan")]
     if _kvg_parser is not None:
         for cjk, key in _STAGE2_CHARS:
-            if key not in CALLIGRAPHY_TRAJECTORIES:
-                try:
-                    CALLIGRAPHY_TRAJECTORIES[key] = _kvg_parser.get_trajectory(cjk)
-                    print(f"[KanjiVG] Built-in '{key}' ({cjk}) → {len(CALLIGRAPHY_TRAJECTORIES[key])} strokes")
-                except Exception as e:
-                    print(f"[KanjiVG] Warning: could not load '{key}': {e}")
+            try:
+                CALLIGRAPHY_TRAJECTORIES[key] = _kvg_parser.get_trajectory(cjk)
+                print(f"[KanjiVG] Built-in '{key}' ({cjk}) → {len(CALLIGRAPHY_TRAJECTORIES[key])} strokes")
+            except Exception as e:
+                print(f"[KanjiVG] Warning: could not load '{key}': {e}")
 
-    # Stage 3: inject KanjiVG trajectory for --char argument (skip if --npz already set extra_char)
-    if extra_char and _kvg_parser is not None and extra_char not in CALLIGRAPHY_TRAJECTORIES:
-        try:
-            traj = _kvg_parser.get_trajectory(extra_char)
-            CALLIGRAPHY_TRAJECTORIES[extra_char] = traj
-            print(f"[KanjiVG] Loaded '{extra_char}' → {len(traj)} strokes")
-        except Exception as e:
-            print(f"[KanjiVG] Failed to load '{extra_char}': {e}")
-            extra_char = None
+    # Explicit input errors propagate instead of silently falling back to 永.
+    for char in dict.fromkeys(list(demo) + ([extra_char] if extra_char else [])):
+        if char in CALLIGRAPHY_TRAJECTORIES:
+            continue
+        if _kvg_parser is None:
+            raise ValueError("KanjiVG XML missing: run data/download_kanjivg.sh")
+        CALLIGRAPHY_TRAJECTORIES[char] = _kvg_parser.get_trajectory(char)
+    if demo:
+        extra_char = demo[0]
 
     print("=" * 70)
     print("  RoboFab Calligraphy Simulator  (ISDN5240)")
     print("=" * 70)
 
     # 1. Start Viser Server
-    server = viser.ViserServer()
-    server.initial_camera.position = (1.4, -0.9, 1.1)
-    server.initial_camera.look_at = (0.55, 0.0, 0.2)
+    server = viser.ViserServer(port=port)
+    # Camera in front of paper (Y- side), centred on paper X — prevents mirrored appearance
+    server.initial_camera.position = (0.55, -1.2, 0.8)
+    server.initial_camera.look_at = (0.55, 0.0, 0.05)
     server.initial_camera.up = (0.0, 0.0, 1.0)
 
     # 2. Add Studio Environment (Calligraphy Table, Xuan Paper, Scholar's Items)
     server.scene.add_grid("/ground", width=3.0, height=3.0, position=(0.0, 0.0, -0.4))
 
-    # Rosewood Calligraphy Table (Top at Z = 0.0)
+    # Rosewood Calligraphy Table
     server.scene.add_box(
         "/studio/table",
         color=(45, 30, 22),
-        dimensions=(0.60, 0.80, 0.04),
+        dimensions=(0.60, 0.40, 0.04),
         position=(0.55, 0.0, -0.02),
     )
 
-    # Xuan Paper Canvas (Surface at Z = 0.002)
-    paper = XuanPaperCanvas(resolution=1024, physical_width=0.36, physical_height=0.36, origin_xy=(0.55, 0.0))
+    # Xuan Paper Canvas — horizontal scroll: wide in x (reach), narrow in y
+    paper = XuanPaperCanvas(resolution=1024, physical_width=0.36, physical_height=0.14, origin_xy=(0.55, 0.0))
     paper_handle = server.scene.add_image(
         "/studio/xuan_paper",
         image=np.array(paper.image.convert("RGB")),
         render_width=paper.pw,
         render_height=paper.ph,
         position=(paper.ox, paper.oy, 0.002),
-        wxyz=(1.0, 0.0, 0.0, 0.0),
+        wxyz=(0.0, 1.0, 0.0, 0.0),
     )
 
     # Brass Paperweights
     server.scene.add_box(
         "/studio/paperweight_left",
         color=(185, 145, 60),
-        dimensions=(0.025, 0.30, 0.012),
+        dimensions=(0.025, 0.14, 0.012),
         position=(0.35, 0.0, 0.008),
     )
     server.scene.add_box(
         "/studio/paperweight_right",
         color=(185, 145, 60),
-        dimensions=(0.025, 0.30, 0.012),
+        dimensions=(0.025, 0.14, 0.012),
         position=(0.75, 0.0, 0.008),
     )
 
@@ -612,14 +630,15 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
         btn_play = server.gui.add_button("Execute Character (Write)")
         btn_step = server.gui.add_button("Step Stroke")
         btn_reset = server.gui.add_button("Reset Arm Pose")
+        btn_replay_all = server.gui.add_button("Replay All (重播全部)" if demo else "Replay All")
         slider_speed = server.gui.add_slider("Writing Speed", min=0.2, max=3.0, step=0.1, initial_value=1.0)
         chk_loop = server.gui.add_checkbox("Loop Playback", False)
 
     with server.gui.add_folder("Manual Cartesian IK Jogging"):
         slider_ik_x = server.gui.add_slider("Tip X (Reach)", min=0.35, max=0.75, step=0.002, initial_value=0.55)
         slider_ik_y = server.gui.add_slider("Tip Y (Lateral)", min=-0.18, max=0.18, step=0.002, initial_value=0.0)
-        slider_ik_z = server.gui.add_slider("Tip Z (Height/Press)", min=-0.010, max=0.080, step=0.001, initial_value=0.025)
-        btn_touch_paper = server.gui.add_button("Touch Paper (Z=0)")
+        slider_ik_z = server.gui.add_slider("Tip Z (Height/Press)", min=-0.010, max=0.650, step=0.001, initial_value=0.025)
+        btn_touch_paper = server.gui.add_button("Touch Paper (1mm compression)")
         btn_lift_safe = server.gui.add_button("Lift Brush (Z=35mm)")
 
     with server.gui.add_folder("Joint Angles (7-DOF Franka Panda)"):
@@ -639,7 +658,6 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
         slider_splay = server.gui.add_slider("Splay Factor (铺毫)", min=0.8, max=2.5, step=0.1, initial_value=1.4)
         slider_bleed = server.gui.add_slider("Paper Absorbency", min=0.0, max=2.0, step=0.1, initial_value=0.7)
         btn_clear = server.gui.add_button("Wash Paper (Clear)")
-        btn_dip = server.gui.add_button("Dip Ink (100%)")
 
     # GUI Callbacks
     @btn_clear.on_click
@@ -647,65 +665,135 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
         paper.clear()
         paper_handle.image = np.array(paper.image.convert("RGB"))
 
-    @btn_dip.on_click
-    def _(_):
-        brush_tuft.ink_level = 100.0
-
     @btn_touch_paper.on_click
     def _(_):
         slider_ik_z.value = 0.001
+        handle_cartesian_slider_change(_)
 
     @btn_lift_safe.on_click
     def _(_):
         slider_ik_z.value = 0.035
+        handle_cartesian_slider_change(_)
 
     # Trajectory execution state
-    play_state = {
-        "running": False,
-        "char": "yong",
-        "stroke_idx": 0,
-        "point_idx": 0,
-        "t": 0.0,
-        "last_tip": np.array([0.55, 0.0, 0.025]),
-    }
+    play_state = {"running": False, "last_tip": nominal_tip_p.copy(),
+                  "execution": None, "step": False}
+    status = server.gui.add_markdown("Ready — KanjiVG → IK/FK → brush → ink")
+    demo_index, demo_ready_at = 0, time.monotonic()
+    capture, next_capture_at = None, 0.0
+
+    # Grid layout for demo: characters spaced along X (reach axis), centred on Y=0.
+    # X range [0.38, 0.72] = 0.34m is fully reachable; each char gets an equal slot.
+    _IK_X_MIN, _IK_X_MAX = 0.38, 0.72
+    _demo_chars = list(demo) if demo else []
+    _n_demo = len(_demo_chars)
+    _demo_slot = (_IK_X_MAX - _IK_X_MIN) / max(1, _n_demo)
+    # Scale so char half-width (0.075*scale) fills 80% of the slot.
+    _demo_scale = min(0.85, _demo_slot / (0.075 * 2) * 0.80)
+    _demo_scale = max(0.25, _demo_scale)
+
+    def _demo_offsets(idx: int) -> tuple[float, float]:
+        """Return (x_offset, y_offset=0) spaced along the robot reach axis.
+        idx=0 → smallest x (near, left on canvas) → first char appears leftmost."""
+        if _n_demo <= 1:
+            return 0.0, 0.0
+        x_center = _IK_X_MIN + _demo_slot * (idx + 0.5)
+        x_off = round(x_center - 0.55, 4)
+        return x_off, 0.0
+
+    def _get_demo_trajectory(char: str, idx: int):
+        """Build trajectory with per-slot grid offset when running in demo mode."""
+        x_off, y_off = _demo_offsets(idx)
+        if _kvg_parser is not None and _kvg_parser.available(char):
+            return _kvg_parser.get_trajectory(char, x_offset=x_off, y_offset=y_off,
+                                              scale=_demo_scale)
+        # Fall back to stored trajectory shifted by offset (built-in hand-crafted waypoints)
+        base = CALLIGRAPHY_TRAJECTORIES[char]
+        if x_off == 0.0 and y_off == 0.0:
+            return base
+        return [[(wx + x_off, wy + y_off, z, p) for wx, wy, z, p in stroke]
+                for stroke in base]
+
+    def begin(demo_slot: int | None = None):
+        char = char_selector.value
+        if demo_slot is None:
+            # Interactive mode: single character, always clear paper first
+            paper.clear()
+            strokes = CALLIGRAPHY_TRAJECTORIES[char]
+        else:
+            # Demo mode: keep previous chars on paper, place new char in its slot
+            strokes = _get_demo_trajectory(char, demo_slot)
+        play_state["execution"] = Execution(kinematics, brush_tuft, paper,
+                                            strokes, current_q)
+        play_state["running"] = True
+        play_state["last_tip"] = kinematics.forward_kinematics(current_q)[2]
+
+    @char_selector.on_update
+    def _(_):
+        if _.client is None:
+            return
+        play_state["running"] = False
+        play_state["execution"] = None
+        play_state["step"] = False
+        paper.clear()
+        paper_handle.image = np.array(paper.image)
+        btn_play.label = "Execute Character (Write)"
 
     @btn_play.on_click
     def _(_):
-        play_state["running"] = not play_state["running"]
+        execution = play_state["execution"]
+        if execution is None or execution.done:
+            begin()
+        else:
+            play_state["running"] = not play_state["running"]
+        play_state["step"] = False
         btn_play.label = "Pause Writing" if play_state["running"] else "Resume Writing"
 
     @btn_step.on_click
     def _(_):
+        execution = play_state["execution"]
+        if execution is None or execution.done:
+            begin()
+        play_state["step"] = True
+        play_state["running"] = True
+        btn_play.label = "Pause Writing"
+
+    @btn_replay_all.on_click
+    def _(_):
+        nonlocal demo_index, demo_ready_at
+        if not demo:
+            return
         play_state["running"] = False
-        btn_play.label = "Resume Writing"
-        char_strokes = CALLIGRAPHY_TRAJECTORIES[char_selector.value]
-        play_state["stroke_idx"] = (play_state["stroke_idx"] + 1) % len(char_strokes)
-        play_state["point_idx"] = 0
-        play_state["t"] = 0.0
+        play_state["execution"] = None
+        paper.clear()
+        paper_handle.image = np.array(paper.image.convert("RGB"))
+        demo_index = 0
+        demo_ready_at = time.monotonic() + 0.5
+        btn_play.label = "Execute Character (Write)"
 
     @btn_reset.on_click
     def _(_):
         nonlocal current_q
         play_state["running"] = False
-        play_state["stroke_idx"] = 0
-        play_state["point_idx"] = 0
-        play_state["t"] = 0.0
+        play_state["execution"] = None
         btn_play.label = "Execute Character (Write)"
         current_q = kinematics.NOMINAL_REST_Q.copy()
         update_viser_urdf_cfg(current_q)
         for i, js in enumerate(joint_sliders):
             js.value = float(current_q[i])
         _, _, tip_p = kinematics.forward_kinematics(current_q)
+        play_state["last_tip"] = tip_p.copy()
         slider_ik_x.value = round(float(tip_p[0]), 3)
         slider_ik_y.value = round(float(tip_p[1]), 3)
         slider_ik_z.value = round(float(tip_p[2]), 3)
 
     # Interactive slider callbacks
     def handle_cartesian_slider_change(_):
-        if not play_state["running"]:
+        if _.client is not None and not play_state["running"]:
             target_pos = np.array([slider_ik_x.value, slider_ik_y.value, slider_ik_z.value])
             nonlocal current_q
             current_q = kinematics.solve_ik(target_pos, current_q)
+            play_state["execution"] = None
             update_viser_urdf_cfg(current_q)
             for i, js in enumerate(joint_sliders):
                 js.value = float(current_q[i])
@@ -716,8 +804,9 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
 
     def make_joint_slider_cb(idx):
         def _(_):
-            if not play_state["running"]:
+            if _.client is not None and not play_state["running"]:
                 current_q[idx] = joint_sliders[idx].value
+                play_state["execution"] = None
                 update_viser_urdf_cfg(current_q)
                 _, _, tip_p = kinematics.forward_kinematics(current_q)
                 slider_ik_x.value = round(float(tip_p[0]), 3)
@@ -733,6 +822,7 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
     print("👉 Connect to Viser at the URL displayed above (e.g. http://localhost:8080 or http://localhost:8081)\\n")
 
     last_time = time.time()
+    budget = 0.0
     while True:
         now = time.time()
         dt = min(0.1, now - last_time)
@@ -743,51 +833,50 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
         brush_tuft.splay_factor = slider_splay.value
         bleed = slider_bleed.value
 
-        # A. Trajectory Player
+        # A. Fixed-distance samples: same executed path at every UI speed.
+        if demo and not play_state["running"] and time.monotonic() >= demo_ready_at and server.get_clients():
+            if demo_index < len(demo):
+                char_selector.value = demo[demo_index]
+                begin(demo_slot=demo_index)
+                demo_index += 1
+            elif record_dir:
+                capture.finish()
+                print("[CAPTURE_OK] Real browser video saved.", flush=True)
+                server.stop()
+                return
+        moved = False
         if play_state["running"]:
-            char_strokes = CALLIGRAPHY_TRAJECTORIES[char_selector.value]
-            if play_state["stroke_idx"] < len(char_strokes):
-                stroke = char_strokes[play_state["stroke_idx"]]
-                p_idx = play_state["point_idx"]
-
-                if p_idx + 1 < len(stroke):
-                    p0 = stroke[p_idx]
-                    p1 = stroke[p_idx + 1]
-
-                    play_state["t"] += dt * slider_speed.value * 2.2
-                    alpha = min(1.0, play_state["t"])
-                    smooth_t = alpha * alpha * (3.0 - 2.0 * alpha)
-
-                    target_x = p0[0] + (p1[0] - p0[0]) * smooth_t
-                    target_y = p0[1] + (p1[1] - p0[1]) * smooth_t
-                    target_z = p0[2] + (p1[2] - p0[2]) * smooth_t
-
-                    target_pos = np.array([target_x, target_y, target_z])
-                    current_q = kinematics.solve_ik(target_pos, current_q)
-
-                    if play_state["t"] >= 1.0:
-                        play_state["t"] = 0.0
-                        play_state["point_idx"] += 1
-                else:
-                    play_state["stroke_idx"] += 1
-                    play_state["point_idx"] = 0
-                    play_state["t"] = 0.0
-            else:
-                if chk_loop.value:
-                    play_state["stroke_idx"] = 0
-                    play_state["point_idx"] = 0
-                    play_state["t"] = 0.0
-                    paper.clear()
-                    paper_handle.image = np.array(paper.image.convert("RGB"))
-                else:
-                    play_state["running"] = False
-                    btn_play.label = "Replay Character"
-
-            for i, js in enumerate(joint_sliders):
-                js.value = float(current_q[i])
-            slider_ik_x.value = round(float(target_pos[0]), 3)
-            slider_ik_y.value = round(float(target_pos[1]), 3)
-            slider_ik_z.value = round(float(target_pos[2]), 3)
+            execution = play_state["execution"]
+            budget += dt * 60 * slider_speed.value
+            while budget >= 1 and not execution.done:
+                execution.step(bleed)
+                moved = True
+                budget -= 1
+                if play_state["step"] and execution.index < len(execution.samples):
+                    now_stroke = execution.samples[execution.index-1].stroke
+                    next_stroke = execution.samples[execution.index].stroke
+                    if now_stroke >= 0 and next_stroke != now_stroke:
+                        play_state["running"] = False
+                        btn_play.label = "Resume Writing"
+                        break
+            current_q = execution.q.copy()
+            phase = execution.samples[max(0, execution.index-1)]
+            state = "Complete · brush lifted 23 mm" if execution.done else ("Writing" if play_state["running"] else "Paused")
+            status.content = f"**{char_selector.value}** · sample {execution.index}/{len(execution.samples)} · stroke {phase.stroke+1} · {state}"
+            if execution.done:
+                play_state["running"] = False
+                btn_play.label = "Replay Character"
+                demo_ready_at = time.monotonic() + 2
+                if chk_loop.value and not demo:
+                    begin()
+            if moved:
+                paper_handle.image = np.array(paper.image)
+                for i, js in enumerate(joint_sliders):
+                    js.value = float(current_q[i])
+                tip = execution.last_tip
+                slider_ik_x.value, slider_ik_y.value, slider_ik_z.value = map(float, tip)
+        else:
+            budget = 0.0
 
         # B. Synchronize URDF Robot Mesh Articulation
         update_viser_urdf_cfg(current_q)
@@ -808,7 +897,10 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
         velocity = (nominal_tip_p - play_state["last_tip"]) / max(1e-4, dt)
         play_state["last_tip"] = nominal_tip_p.copy()
 
-        tuft_data = brush_tuft.compute_deformation(tuft_root_p, nominal_tip_p, hand_r, velocity)
+        execution = play_state["execution"]
+        tuft_data = execution.last_tuft if execution is not None else None
+        if tuft_data is None:
+            tuft_data = brush_tuft.compute_deformation(tuft_root_p, nominal_tip_p, hand_r, velocity)
 
         # Update 3D tuft core mesh and fine bristle fibers
         server.scene.add_mesh_simple(
@@ -826,21 +918,35 @@ def main(extra_char: str | None = None, npz_path: str | None = None):
         )
 
         # E. Ink Deposition onto Xuan Paper
-        if tuft_data["is_contact"]:
+        if tuft_data["is_contact"] and not moved and play_state["execution"] is None and np.linalg.norm(velocity) > 1e-4:
             actual_tip = tuft_data["actual_tip"]
             fn = tuft_data["normal_force"]
             fr = tuft_data["footprint_radius"]
             paper.deposit_ink(actual_tip[0], actual_tip[1], fr, fn, bleed_factor=bleed)
             paper_handle.image = np.array(paper.image.convert("RGB"))
 
+        if record_dir and server.get_clients() and time.monotonic() >= next_capture_at:
+            if capture is None:
+                capture = BrowserCapture(record_dir)
+                slider_speed.value = 3.0
+            client = next(iter(server.get_clients().values()))
+            execution = play_state["execution"]
+            label = f"U+{ord(char_selector.value):04X} | run {demo_index}/{len(demo)}"
+            if execution is not None:
+                label += f" | sample {execution.index}/{len(execution.samples)}"
+            capture.frame(client, paper.image, label)
+            next_capture_at = time.monotonic() + .15
+
         time.sleep(0.015)
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="RoboFab Calligraphy Simulator")
     ap.add_argument("--char", default=None,
-                    help="Stage 3 (KanjiVG): any CJK character, e.g. --char 福")
+                    help="KanjiVG character available in the dataset, e.g. --char 春")
     ap.add_argument("--npz", default=None,
-                    help="Stage 3 (CalliRewrite): path to seq_extract output .npz file")
+                    help="EXPERIMENTAL: seq_extract .npz; not validated for grading")
+    ap.add_argument("--port", type=int, default=8080)
+    ap.add_argument("--demo", default="", help="Automatically execute this character sequence after a viewer connects")
+    ap.add_argument("--record-dir", default=None, help="Capture real connected-browser renders; exits after --demo")
     args = ap.parse_args()
-    main(extra_char=args.char, npz_path=args.npz)
-    main(extra_char=args.char)
+    main(extra_char=args.char, npz_path=args.npz, port=args.port, demo=args.demo, record_dir=args.record_dir)
